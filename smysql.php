@@ -17,6 +17,14 @@
     function __construct($e, $code = 0, Exception $previous = NULL) {
       $gt = parent::getTrace();
       $egt = end($gt);
+      if($gt[0]['file']==__FILE__) {
+        foreach($gt as $k => $v) {
+          if($v['file']!=__FILE__) {
+            $egt = $v;
+            break;
+          };
+        };
+      };
       $this->message = "<strong>Super-MySQL error</strong> " . $e . " in <strong>" . $egt['file'] . "</strong> on line <strong>" . $egt['line'] . "</strong>";
     }
     function __toString() {
