@@ -394,29 +394,33 @@
       return $f;
     }
 
-    public function fetchWhere($table, $bool, $flags = 129) {
+    public function fetchWhere($table, $cond, $flags = 129) {
       $r = $this->result;
-      $this->selectWhere($table, $bool, $flags);
+      $this->selectWhere($table, $cond, $flags);
       $f = $this->fetch();
       $this->result = $r;
       return $f;
     }
 
-    public function read($table, $bool = [], $flags = 129) {
+    public function read($table, $cond = [], $flags = 129) {
       $r = $this->result;
       $f = new stdClass();
       $f->someKey = "nonfalse";
-      if($bool===[]) {
+      if(gettype($cond)=="integer" && $flags==129) {
+        $flags = $cond;
+        $cond = [];
+      };
+      if($cond===[]) {
         $f = $this->selectAll($table);
         $this->result = $r;
       }
-      elseif(!$this->exists($table, $bool, $flags, "read"))
+      elseif(!$this->exists($table, $cond, $flags, "read"))
         if(boolval($flags & self::ALWAYS_ARRAY))
           return [];
         else
           return false;
       else {
-        $this->selectWhere($table, $bool, "", ["*"], $flags);
+        $this->selectWhere($table, $cond, "", ["*"], $flags);
         $f = $this->fetch(self::FETCH_ALL);
       };
       if($f===new stdClass() && !boolval($flags & self::ALWAYS_ARRAY))
