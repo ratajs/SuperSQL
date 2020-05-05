@@ -1,2 +1,2 @@
 # Super-MySQL
-Powerful PHP SQL query builder
+A powerful PHP SQL query builder
