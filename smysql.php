@@ -348,24 +348,24 @@
       return (boolval($flags & self::INSERT_RETURN_ID) ? $this->connect->lastInsertId() : $r);
     }
 
-    public function delete($table, $array, $flags = 128) {
+    public function delete($table, $cond, $flags = 128) {
       $all = !boolval($flags & self::COND_OR);
-      $bool = $this->getCondString($array, $all);
+      $condString = $this->getCondString($cond, $all);
       return $this->query("
-        DELETE FROM `$table` WHERE $bool
+        DELETE FROM `$table` WHERE $condString
       ", $flags, "delete");
     }
 
-    public function update($table, $arr, $array, $flags = 128) {
-      $bool = $this->getCondString($arr, $flags & 128);
+    public function update($table, $cond, $values, $flags = 128) {
+      $condString = $this->getCondString($cond, $flags & 128);
       $string = "";
-      foreach($array as $key => $value) {
+      foreach($values as $key => $value) {
         if($string!="")
           $string.= ", ";
         $string.= "`" . $key . "`=" . ($value===NULL ? "NULL" : ("'" . $this->escape($value) . "'"));
       };
       return $this->query("
-        UPDATE `$table` SET $string WHERE $bool
+        UPDATE `$table` SET $string WHERE $condString
       ", $flags, "update");
     }
 
@@ -440,8 +440,8 @@
       return $f;
     }
 
-    public function createTable($table, $names, $types, $lengths, $nulls, $primary = "", $uniques, $others = [], $flags = 0) {
-      $parameters = $this->getParameters($names, $types, $lengths, $nulls, $uniques, $others);
+    public function createTable($table, $params, $primary = "", $flags = 0) {
+      $parameters = $this->getParameters($params);
       $valueString = implode(",\n", $parameters);
       return $this->query("
         CREATE TABLE `$table` ($valueString)
@@ -461,35 +461,18 @@
       ", $flags, "deleteTable");
     }
 
-    private function getParameters($names, $types, $lengths, $nulls, $others = []) {
-      if(count($names)==count($types) && count($names)==count($nulls)) {
-        if(count($names)==count($others)) {
-          foreach($names as $k => $v) {
-            $t = $types[$k];
-            $l = $lengths[$k];
-            $n = $nulls[$k] ? "NULL" : "NOT NULL";
-            $o = $others[$k];
-            if(empty($l))
-              $r[] = "$v $t $n $o";
-            else
-              $r[] = "$v $t($v) $n $o";
-          };
-          return $r;
-        }
-        elseif($others==[]) {
-          foreach($names as $k => $v) {
-            $t = $types[$k];
-            $l = $lengths[$k];
-            $n = $nulls[$k] ? "NULL" : "NOT NULL";
-            if(empty($l))
-              $r[] = "$v $t $n" . (in_array($v, $uniques) ? "" : " UNIQUE") . " $o";
-            else
-              $r[] = "$v $t($l) $n" . (in_array($v, $uniques) ? "" : " UNIQUE") . " $o";
-          };
-          return $r;
-        };
+    private function getParameters($params) {
+      foreach($names as $k => $v) {
+        $t = $v['type'];
+        $l = $v['length'];
+        $n = $v['NULL'] ? "NULL" : "NOT NULL";
+        $o = $v['other'];
+        if(empty($l))
+          $r[] = "$v $t $n $o";
+        else
+          $r[] = "$v $t($v) $n $o";
       };
-      return false;
+      return $r;
     }
 
     public function q($q, string ...$a) {
