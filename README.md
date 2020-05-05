@@ -17,10 +17,14 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $smysql = new Smysql("localhost", "root", "root", "db");
   
   //To execute raw SQL query use $smysql->q($q[, $a])
-  $smysql->q("SELECT * FROM users");
+  $smysql->q("SELECT * FROM users")->fetch(SMQ::FETCH_ALL);
   
   //You can use wildcards for escaping
-  $smysql->q("SELECT * FROM users WHERE `username`=%1 OR `nickname`=%2", [$name, $nick]);
+  $smysql->q("SELECT * FROM users WHERE `username`=%1 OR `nickname`=%2", [$name, $nick])->fetch();
+  
+  //You can use queries as methods
+  $smysql->getUser = "SELECT * FROM users WHERE `username`=%1 OR `nickname`=%2";
+  $user = $smysql->getUser($name, $nick)->fetch();
 
   //For simple requests use $smysql->read($table[, $flags]) or $smysql->read($table, $cond[, $flags]), you need to use flag ALWAYS_ARRAY to return array even when there is only one result
   $users = $smysql->read("users", SMQ::ALWAYS_ARRAY);
