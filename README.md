@@ -30,7 +30,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $user = $smysql->read("users", ['username' => $name, 'password' => $pass]);
   
   //You can use the COND_OR for OR operator instead of AND
-  $user = $smysql->read("users", ['sign_up_time' => $time, 'nickname' => $nick], SMQ::ALWAYS_ARRAY | SMQ::COND_OR)[0];
+  $user = $smysql->read("users", ['username' => $name, 'nickname' => $nick], SMQ::ALWAYS_ARRAY | SMQ::COND_OR)[0];
   
   //You can use custom conditions
   $users = $smyslq->read("users", "`sign_up_time` > " . bcsub(time(), 3600));
