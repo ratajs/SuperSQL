@@ -7,7 +7,7 @@ Super MySQL is an easy-to-use powerful SQL query builder.
 * PDO MySQL extension
 
 ## Example
-Let’s have a table “<strong>users</strong>” with 4 columns: `uid`, `username`, `password`, `sign_up_time` and `nickname`
+Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `username`, `password`, `sign_up_time` and `nickname`
 
 ```php
 <?php
