@@ -325,14 +325,15 @@
           $useCols = false;
       };
       if($useCols)
-        $cols = array_flip($values);
+        $cols = array_values(array_flip($values));
+      $values = array_values($values);
       if($cols==[""] || $cols=="")
         $colString = "";
       else {
         $colString = " (";
         foreach($cols as $key => $value) {
           if($key!=0) $colString.= ", ";
-          $colString.= "'" . $this->escape($value) . "'";
+          $colString.= "`" . $this->escape($value) . "`";
         };
         $colString.= ")";
       };
