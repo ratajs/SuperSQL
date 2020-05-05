@@ -16,7 +16,7 @@ Let’s have a table users with 4 columns: uid, username, password, registered
     $user = $smysql->read("users", ['uid' => $id]);
     
     //For more complicated requests use $smysql->select($table[, $order[, $cols[, $flags]]])
-    $users = $smysql->select("users", "registered", ['id' => "uid", 'name' => "username", "registered"], SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL | SMQ::ALWAYS_ARRAY);
+    $users = $smysql->select("users", "registered", ['id' => "uid", 'name' => "username", "registered"], SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
     
     //Or $smysql->selectWhere($table, $cond[, $order[, $cols[, $flags]]])
     $user = $smysql->selectWhere("users", ['uid' => $id], ['id' => "uid", 'name' => "username", "registered"])->fetch();
