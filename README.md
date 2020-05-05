@@ -20,10 +20,10 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $smysql->q("SELECT * FROM users")->fetch(SMQ::FETCH_ALL);
   
   //You can use wildcards for escaping
-  $smysql->q("SELECT * FROM users WHERE `username`=%1 OR `nickname`=%2", [$name, $nick])->fetch();
+  $smysql->q("SELECT * FROM users WHERE `username`=%0 OR `nickname`=%1", [$name, $nick])->fetch();
   
   //You can use queries as methods
-  $smysql->getUser = "SELECT * FROM users WHERE `username`=%1 OR `nickname`=%2";
+  $smysql->getUser = "SELECT * FROM users WHERE `username`=%0 OR `nickname`=%1";
   $user = $smysql->getUser($name, $nick)->fetch();
 
   //For simple requests use $smysql->read($table[, $flags]) or $smysql->read($table, $cond[, $flags]), you need to use flag ALWAYS_ARRAY to return array even when there is only one result
