@@ -19,6 +19,6 @@ Let’s have a table users with 4 columns: uid, username, password, registered
     $users = $smysql->select("users", "registered", ['id' => "uid", 'name' => "username", "registered"], SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL | SMQ::ALWAYS_ARRAY);
     
     //Or $smysql->selectWhere($table, $cond[, $order[, $cols[, $flags]]])
-    $user = $smysql->selectWhere("users", ['uid' => $id])->fetch();
+    $user = $smysql->selectWhere("users", ['uid' => $id], ['id' => "uid", 'name' => "username", "registered"])->fetch();
   ?>
 ```
