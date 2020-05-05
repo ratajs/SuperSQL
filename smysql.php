@@ -7,7 +7,7 @@
   define("SQ_JOIN_FULL", 32);
   define("SQ_INSERT_RETURN_ID", 64);
   define("SQ_COND_AND", 128);
-  define("SQ_COND_OR", 256)
+  define("SQ_COND_OR", 256);
   define("SQ_FETCH_OBJECT", 512);
   define("SQ_FETCH_ARRAY", 1024);
   define("SQ_FETCH_ALL", 2048);
@@ -226,7 +226,7 @@
 
     public function select($table, $order = "", $cols = ["*"], $flags = 129) {
 			foreach($cols as $k => $v) {
-				if(!is_numeric($k))
+				if(gettype($k)!="integer")
 					$cols[$k] = $v . " AS " . $k;
 			};
       $colsValue = implode(", ", $cols);
@@ -241,7 +241,7 @@
       $all = !boolval($cond & self::COND_OR);
       $condString = $this->getCondString($cond, $all);
 			foreach($cols as $k => $v) {
-				if(!is_numeric($k))
+				if(gettype($k)!="integer")
 					$cols[$k] = $v . " AS " . $k;
 			};
       $colsValue = implode(", ", $cols);
@@ -263,7 +263,7 @@
       };
       $onString = $this->getCondString($on, $all, true);
 			foreach($cols as $k => $v) {
-				if(!is_numeric($k))
+				if(gettype($k)!="integer")
 					$cols[$k] = $v . " AS " . $k;
 			};
       $colsValue = implode(", ", $cols);
@@ -289,7 +289,7 @@
       $onString = $this->getCondString($on, $all, true);
       $condString = $this->getCondString($cond, $all);
 			foreach($cols as $k => $v) {
-				if(!is_numeric($k))
+				if(gettype($k)!="integer")
 					$cols[$k] = $v . " AS " . $k;
 			};
       $colsValue = implode(", ", $cols);
@@ -317,7 +317,15 @@
       ", $flags, "truncate");
     }
 
-    public function insert($table, $values, $cols = [""], $flags = 0) {
+    public function insert($table, $values, $flags = 0) {
+      $cols = [""];
+      $useCols = true;
+      foreach($values as $k => $v) {
+        if(gettype($k)=="integer")
+          $useCols = false;
+      };
+      if($useCols)
+        $cols = array_flip($values);
       if($cols==[""] || $cols=="")
         $colString = "";
       else {
