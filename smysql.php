@@ -255,7 +255,6 @@
     public function selectJoin($table, $join, $on, $order = "", $cols = ["*"], $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
-        case boolval($flags & self::JOIN_INNER): $jt = "INNER"; break;
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
         case boolval($flags & self::JOIN_RIGHT): $jt = "RIGHT OUTER"; break;
         case boolval($flags & self::JOIN_FULL): $jt = "FULL OUTER"; break;
@@ -280,7 +279,6 @@
     public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = ["*"], $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
-        case boolval($flags & self::JOIN_INNER): $jt = "INNER"; break;
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
         case boolval($flags & self::JOIN_RIGHT): $jt = "RIGHT OUTER"; break;
         case boolval($flags & self::JOIN_FULL): $jt = "FULL OUTER"; break;
@@ -575,16 +573,16 @@
     }
     public function fetch($flags = 512) {
       $id = $this->pdos;
-      if(boolval($flags & SMQ::FETCH_OBJECT))
-        $return =  $id->fetchObject();
-      elseif(boolval($flags & SMQ::FETCH_ARRAY))
+      if(boolval($flags & SMQ::FETCH_ARRAY))
         $return =  $id->fetch();
       elseif(boolval($flags & SMQ::FETCH_ALL)) {
         $return = [];
         while($row = $id->fetchObject()) {
           $return[] = $row;
         };
-      };
+      }
+      else
+        $return =  $id->fetchObject();
       return $return;
     }
     public function dump($print = true) {
