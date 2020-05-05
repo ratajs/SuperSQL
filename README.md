@@ -43,7 +43,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $users = $smyslq->read("users", ["`sign_up_time` > " . bcsub(time(), 3600), "`nickname` IS NOT NULL"], SMQ::ALWAYS_ARRAY);
 
   //For more complicated requests use $smysql->select($table[, $order[, $cols[, $flags]]]), you can use array keys for aliases
-  $users = $smysql->select("users", "registered", ['id' => "uid", 'name' => "username", "sign_up_time", "nickname"], SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
+  $users = $smysql->select("users", "sign_up_time", ['id' => "uid", 'name' => "username", "sign_up_time", "nickname"], SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
 
   //Or $smysql->selectWhere($table, $cond[, $order[, $cols[, $flags]]])
   $user = $smysql->selectWhere("users", ['uid' => $id], ['id' => "uid", 'name' => "username", "sign_up_time", 'nick' => "nickname"])->fetch();
