@@ -63,3 +63,22 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $smysql->delete("users", ['id' => $id]);
 ?>
 ```
+
+## Flags
+Here is list of all Super-MySQL flags:
+* <i>ORDER_ASC</i>
+* <b>ORDER_DESC</b>
+* <i>JOIN_INNER</i>
+* <b>JOIN_LEFT</b>
+* <b>JOIN_RIGHT</b>
+* <b>JOIN_FULL</b>
+* <b>INSERT_RETURN_ID</b>
+* <i>COND_AND</i>
+* <b>COND_OR</b>
+* <i>FETCH_OBJECT</i>
+* <b>FETCH_ARRAY</b>
+* <b>FETCH_ALL</b>
+* <b>ALWAYS_ARRAY</b>
+* <b>NO_ERROR</b>
+
+The italic ones are not recognized at all because they are defaults.
