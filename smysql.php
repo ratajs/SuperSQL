@@ -235,7 +235,9 @@
     public function select($table, $order = "", $cols = ["*"], $flags = 129) {
 			foreach($cols as $k => $v) {
 				if(gettype($k)!="integer")
-					$cols[$k] = $v . " AS " . $k;
+					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+				elseif($v!="*")
+					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
       if(!empty($order))
@@ -250,7 +252,9 @@
       $condString = $this->getCondString($cond, $all);
 			foreach($cols as $k => $v) {
 				if(gettype($k)!="integer")
-					$cols[$k] = $v . " AS " . $k;
+					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+				elseif($v!="*")
+					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
       if(!empty($order))
@@ -271,7 +275,9 @@
       $onString = $this->getCondString($on, $all, true);
 			foreach($cols as $k => $v) {
 				if(gettype($k)!="integer")
-					$cols[$k] = $v . " AS " . $k;
+					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+				elseif($v!="*")
+					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
       if(!empty($order))
@@ -296,7 +302,9 @@
       $condString = $this->getCondString($cond, $all);
 			foreach($cols as $k => $v) {
 				if(gettype($k)!="integer")
-					$cols[$k] = $v . " AS " . $k;
+					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+				elseif($v!="*")
+					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
       if(!empty($order))
@@ -368,7 +376,7 @@
       foreach($values as $key => $value) {
         if($string!="")
           $string.= ", ";
-        $string.= "`" . $key . "`=" . ($value===NULL ? "NULL" : ("'" . $this->escape($value) . "'"));
+        $string.= "`" . $this->escape($key) . "`=" . ($value===NULL ? "NULL" : ("'" . $this->escape($value) . "'"));
       };
       return $this->query("
         UPDATE `$table` SET $string WHERE $condString
