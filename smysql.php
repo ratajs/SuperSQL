@@ -232,7 +232,7 @@
       $this->reload();
     }
 
-    public function select($table, $order = "", $cols = ["*"], $flags = 129) {
+    public function select($table, $order = "", $cols = ["*"], $limit = NULL, $flags = 129) {
 			foreach($cols as $k => $v) {
 				if(gettype($k)!="integer")
 					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
@@ -240,14 +240,15 @@
 					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
-      if(!empty($order))
-        $order = "ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+			if(!empty($order))
+        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
       return $this->query("
-        SELECT $colsValue FROM `$table` $order
+        SELECT $colsValue FROM `$table`$limitString$order
       ", $flags, "select");
     }
 
-    public function selectWhere($table, $cond, $order = "", $cols = ["*"], $flags = 129, $name = "selectWhere") {
+    public function selectWhere($table, $cond, $order = "", $cols = ["*"], $limit = NULL, $flags = 129, $name = "selectWhere") {
       $all = !boolval($cond & self::COND_OR);
       $condString = $this->getCondString($cond, $all);
 			foreach($cols as $k => $v) {
@@ -257,14 +258,15 @@
 					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
+			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
       if(!empty($order))
-        $order = "ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
       return $this->query("
-        SELECT $colsValue FROM `$table` WHERE $condString $order
+        SELECT $colsValue FROM `$table` WHERE $condString$limitString$order
       ", $flags, $name);
     }
 
-    public function selectJoin($table, $join, $on, $order = "", $cols = ["*"], $flags = 133) {
+    public function selectJoin($table, $join, $on, $order = "", $cols = ["*"], $limit = NULL, $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -280,17 +282,17 @@
 					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
-      if(!empty($order))
-        $order = "ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+			if(!empty($order))
+        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
       return $this->query("
         SELECT $colsValue
         FROM `$table`
-        $jt JOIN `$join` ON $onString
-        $order
+        $jt JOIN `$join` ON $onString$limitString$order
       ", $flags, "selectJoin");
     }
 
-    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = ["*"], $flags = 133) {
+    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = ["*"], $limit = NULL, $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -307,20 +309,20 @@
 					$cols[$k] = "`" . $v . "`";
 			};
       $colsValue = implode(", ", $cols);
-      if(!empty($order))
-        $order = "ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+			if(!empty($order))
+        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
       return $this->query("
         SELECT $colsValue
         FROM `$table`
         $jt JOIN `$join` ON $onString
-        WHERE $condString
-        $order
+        WHERE $condString$limitString$order
       ", $flags, "selectJoinWhere");
     }
 
     public function exists($table, $cond, $flags = 129, $name = "exists") {
       $all = !boolval($flags & self::COND_OR);
-      $this->selectWhere($table, $cond, "", ["*"], $flags, $name);
+      $this->selectWhere($table, $cond, "", ["*"], NULL, $flags, $name);
       $noFetch = !$this->fetch();
       return !$noFetch;
     }
@@ -411,7 +413,7 @@
 
     public function selectAll($table, $flags = 129) {
       $r = $this->result;
-      $this->select($table, "", ["*"], $flags);
+      $this->select($table, "", ["*"], NULL, $flags);
       $f = $this->fetch($flags | self::FETCH_ALL);
       $this->result = $r;
       return $f;
@@ -419,7 +421,7 @@
 
     public function fetchWhere($table, $cond, $flags = 129) {
       $r = $this->result;
-      $this->selectWhere($table, $cond, $flags);
+      $this->selectWhere($table, $cond, "", ["*"], NULL, $flags);
       $f = $this->fetch();
       $this->result = $r;
       return $f;
@@ -443,7 +445,7 @@
         else
           return false;
       else {
-        $this->selectWhere($table, $cond, "", ["*"], $flags);
+        $this->selectWhere($table, $cond, "", ["*"], NULL, $flags);
         $f = $this->fetch(self::FETCH_ALL);
       };
       if($f===new stdClass() && !boolval($flags & self::ALWAYS_ARRAY))
@@ -518,7 +520,7 @@
         if(is_array($v)) {
           foreach($v as $k2 => $v2) {
             $col = false;
-            if(str_split($v2)[0]=="`" && end(str_split($v2))=="`") {
+            if(!is_numeric($k) && str_split($v2)[0]=="`" && end(str_split($v2))=="`") {
               $va = str_split($v);
               unset($va[0]);
               unset($va[count($va-1)]);
@@ -526,23 +528,27 @@
             };
             if(!is_numeric($v2))
               $v3 = $this->escape($v2);
-            $r.= "`" . $this->escape($k) . "`";
-            $r.= " = ";
-            if(is_numeric($v3))
-              $v3 = intval($v3);
-            if($v3===NULL)
-              $r.= "IS NULL";
-            elseif(is_numeric($v3))
-              $r.= $v;
-            else
-              $r.= ($on || $col) ? "`$v3`" : "'$v3'";
+						if(is_numeric($k))
+							$r.= $v;
+						else {
+							$r.= "`" . $this->escape($k) . "`";
+							$r.= " = ";
+							if(is_numeric($v3))
+								$v3 = intval($v3);
+							if($v3===NULL)
+								$r.= "IS NULL";
+							elseif(is_numeric($v3))
+								$r.= $v;
+							else
+								$r.= ($on || $col) ? "`$v3`" : "'$v3'";
+						};
             $r.= $and ? " AND " : " OR ";
           };
           return rtrim($r, $and ? " AND " : " OR ");
         }
         else {
           $col = false;
-          if(str_split($v)[0]=="`" && end(str_split($v))=="`") {
+          if(!is_numeric($k) && str_split($v)[0]=="`" && end(str_split($v))=="`") {
             $va = str_split($v);
             unset($va[0]);
             unset($va[count($va)]);
@@ -550,14 +556,18 @@
           };
           if(!is_numeric($v))
             $v = $this->escape($v);
-          $r.= "`" . $this->escape($k) . "`";
-          $r.= " = ";
-          if(is_numeric($v))
-            $v = intval($v);
-          if(is_numeric($v))
-            $r.= $v;
-          else
-            $r.= ($on || $col) ? "`$v`" : "'$v'";
+					if(is_numeric($k))
+						$r.= $v;
+					else {
+						$r.= "`" . $this->escape($k) . "`";
+						$r.= " = ";
+						if(is_numeric($v))
+							$v = intval($v);
+						if(is_numeric($v))
+							$r.= $v;
+						else
+							$r.= ($on || $col) ? "`$v`" : "'$v'";
+					};
           $r.= $and ? " AND " : " OR ";
         };
       };
