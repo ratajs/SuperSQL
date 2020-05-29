@@ -14,8 +14,8 @@
   define("SQ_ALWAYS_ARRAY", 4096);
   define("SQ_NO_ERROR", 8192);
   class SmysqlException extends Exception {
-    function __construct($e, $code = 0, Exception $previous = NULL) {
-      $gt = parent::getTrace();
+    public function __construct($e, $code = 0, Throwable $previous = NULL) {
+      $gt = $this->getTrace();
       $egt = end($gt);
       if($gt[0]['file']==__FILE__) {
         foreach($gt as $k => $v) {
@@ -25,13 +25,19 @@
           };
         };
       };
-      $this->message = "<strong>Super-MySQL error</strong> " . $e . " in <strong>" . $egt['file'] . "</strong> on line <strong>" . $egt['line'] . "</strong>";
+      $this->message = $e;
+      $this->file = $egt['file'];
+      $this->line = $egt['line'];
     }
-    function __toString() {
-      trigger_error($this->message, E_USER_ERROR);
-      return $this->message;
+    public function __toString() {
+      ob_start();
+      trigger_error("<strong>Super-MySQL error</strong> " . $this->message . "in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
+      ob_clean();
+      die("<br /><strong>Super-MySQL error</strong> " . $this->message . "in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
+      return "<strong>Super-MySQL error</strong> " . $this->message;
     }
   };
+
   abstract class SMQ {
     const ORDER_ASC = 1;
     const ORDER_DESC = 2;
@@ -85,16 +91,16 @@
         if(!$this->query("
           CREATE DATABASE $new
           ", "__construct"))
-          throw new SmysqlException("(__construct): Can't create database " . $new);
+          throw new SmysqlException("(__construct): Can’t create database " . $new);
         $this->connect = NULL;
       };
       try {
         $this->connect = @new PDO("mysql:" . (empty($database) ? "" : "dbname=" . $database . ";") . "host=" . $host . ";charset=utf8", $user, $password);
       } catch(PDOException $e) {
-        throw new SmysqlException("(__construct): Can't connect to MySQL: " . $e->getMessage());
+        throw new SmysqlException("(__construct): Can’t connect to MySQL: " . $e->getMessage());
       }
       if($this->connect->errorCode() && $this->connect) {
-        throw new SmysqlException("(__construct): Can't select MySQL database (" . $this->connect->errorInfo()[2] . ")");
+        throw new SmysqlException("(__construct): Can’t select MySQL database (" . $this->connect->errorInfo()[2] . ")");
         $this->connect->close();
       };
     }
@@ -126,7 +132,7 @@
         throw new SmysqlException("(" . $fnc . "): No database selected");
       $qr = $this->connect->query($query);
       if(!$qr && !($flags & self::NO_ERROR))
-        throw new SmysqlException("(" . $fnc . "): Error in MySQL: " . $this->connect->errorInfo()[2] . " <strong>SQL command:</strong> " . (empty($query) ? "<em>Missing</em>" : $query));
+        throw new SmysqlException("(" . $fnc . "): Error in MySQL: <em>" . $this->connect->errorInfo()[2] . "</em> <strong>SQL command:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
       $this->result = new SmysqlResult($qr);
       return $this->result;
     }
@@ -171,7 +177,7 @@
       if(isset($this->fncs[$name]))
         $this->queryf($this->fncs[$name], $params, $flags, $name);
       else
-        throw new SmysqlException("(" . $name . "): This function isn't defined");
+        throw new SmysqlException("(" . $name . "): This function isn’t defined");
     }
 
     public function dbList($flags = 0) {
@@ -214,12 +220,12 @@
 
     public function deleteDB($db, $flags) {
       if($db==$this->db)
-        throw new SmysqlException("(deleteDB): You can't delete current database");
+        throw new SmysqlException("(deleteDB): You can’t delete current database");
       if($this->query("DROP DATABASE `$db`", $flags, "deleteDB")) {
         return true;
       }
       else {
-        throw new SmysqlException("(deleteDB): Can't delete database " . $db);
+        throw new SmysqlException("(deleteDB): Can’t delete database " . $db);
         return false;
       };
     }
