@@ -33,7 +33,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   //You can use more conditions
   $user = $smysql->read("users", ['username' => $name, 'password' => $pass]);
   
-  //You can use the COND_OR for OR operator instead of AND
+  //You can use the COND_OR flag for OR operator instead of AND
   $user = $smysql->read("users", ['username' => $name, 'nickname' => $nick], SMQ::ALWAYS_ARRAY | SMQ::COND_OR)[0];
   
   //You can use custom conditions
