@@ -1,4 +1,4 @@
-# Super-MySQL
+# Super MySQL
 Super MySQL is an easy-to-use powerful SQL query builder.
 
 ## Requirements
