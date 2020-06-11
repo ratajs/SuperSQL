@@ -138,7 +138,9 @@
     }
 
     public function queryf($q, $a, $flags = 0, $fnc = "Queryf") {
-      foreach($a as $k => $v) {
+      for($i = bcsub(count($a), 1); $i>=0; $i--) {
+        $k = array_keys($a)[$i];
+        $v = $a[$k];
         $q = str_replace("%" . $k, $this->escape($v), $q);
       };
       return $this->query($q, $flags, $fnc);
