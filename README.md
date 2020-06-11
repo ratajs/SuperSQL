@@ -103,7 +103,7 @@ The italic ones are not recognized at all because they are defaults.
   };
   //And then create an instance
   $smysql = new mySmysql();
-  //If you omited $db, you can set it afterwards
+  //If $db is not set, you can set it afterwards
   $smysql->changeDb("newDB");
   
   
