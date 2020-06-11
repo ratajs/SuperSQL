@@ -66,7 +66,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   //You can delete rows with $smysql->delete($table, $cond[, $flags])
   $smysql->delete("users", ['id' => $id]);
   
-  //Use $smysql->truncate($table[, $flags]) to delete all rows of a table
+  //Use $smysql->truncate($table[, $flags]) to delete all rows in a table
   $smysql->truncate("users");
 ?>
 ```
@@ -103,7 +103,7 @@ The italic ones are not recognized at all because they are defaults.
   };
   //And then create an instance
   $smysql = new mySmysql();
-  //If you ommited $db, you can set it afterwards
+  //If you omited $db, you can set it afterwards
   $smysql->changeDb("newDB");
   
   
