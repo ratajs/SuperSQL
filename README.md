@@ -65,6 +65,9 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   
   //You can delete rows with $smysql->delete($table, $cond[, $flags])
   $smysql->delete("users", ['id' => $id]);
+  
+  //Use $smysql->truncate($table[, $flags]) to delete all rows of a table
+  $smysql->truncate("users");
 ?>
 ```
 
@@ -86,3 +89,32 @@ Here is list of all Super-MySQL flags:
 * <b>NO_ERROR</b>
 
 The italic ones are not recognized at all because they are defaults.
+
+## More examples
+
+```php
+<?php
+  //To use the same database in more projects you can extend the Smysql class
+  class mySmysql extends Smysql {
+    protected $host = "localhost";
+    protected $user = "root";
+    protected $password = "root";
+    protected $db = "db"; //Optional
+  };
+  //And then create an instance
+  $smysql = new mySmysql();
+  //If you ommited $db, you can set it afterwards
+  $smysql->changeDb("newDB");
+  
+  
+  //Join
+  
+  
+  //Use $smysql->selectJoin($table, $join, $on[, $order[, $cols[, $limit[, $flags]]]]) to execute a JOIN command
+  $result = $smysql->selectJoin("users", "messages", ['from_user' => 'uid'], "time", ["*"], 5, SMQ::ORDER_DESC)->fetchAll();
+  //Use JOIN_LEFT, JOIN_RIGHT and JOIN_FULL flags to other types of JOIN
+  
+  //To combine JOIN and WHERE use $smysql->selectJoinWhere($table, $join, $on, $cond[, $order[, $cols[, $limit[, $flags]]]])
+  $result = $smysql->selectJoinWhere("users", "messages", ['from_user' => 'uid'], ['from_user' => $uid])->fetchAll();
+?>
+```
