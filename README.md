@@ -2,7 +2,7 @@
 Super MySQL is an easy-to-use powerful SQL query builder.
 
 ## Requirements
-* PHP 7.0+
+* PHP 5.6+
 * MySQL
 * PDO MySQL extension
 
@@ -13,7 +13,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
 <?php
   include "smysql.php";
 
-  //Connect with new Smysql($host, $user, $password, $database)
+  //Connect with new Smysql($host, $user, $password[, $database])
   $smysql = new Smysql("localhost", "root", "root", "db");
   
   //To execute raw SQL query use $smysql->q($q[, $a])
