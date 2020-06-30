@@ -393,13 +393,13 @@
       ", $flags, "update");
     }
 
-    public function add($table, $name, $type, $lenth, $null, $where, $key, $data = "") {
+    public function add($table, $name, $type, $length, $null, $where, $key, $data = "") {
       if(!empty($data))
         $data = " " . $data;
       $type = strtoupper($type);
       $where = strtoupper($where);
       return $this->query("
-        ALTER TABLE `$table` ADD '$name' $type($lenth) " . ($null ? "NULL" : "NOT NULL") . "$data $where '$key'
+        ALTER TABLE `$table` ADD '$name' $type($length) " . ($null ? "NULL" : "NOT NULL") . "$data $where '$key'
       ", $flags, "drop");
     }
 
@@ -409,13 +409,13 @@
       ", $flags, "drop");
     }
 
-    public function change($table, $name, $newname, $type, $lenth, $null, $data = "", $flags = 0) {
+    public function change($table, $name, $newname, $type, $length, $null, $data = "", $flags = 0) {
       if(!empty($data))
         $data = " " . $data;
       $type = strtoupper($type);
       $where = strtoupper($where);
       return $this->query("
-        ALTER TABLE `$table` CHANGE '$name' $newname $type($lenth) " . ($null ? "NULL" : "NOT NULL") . $data
+        ALTER TABLE `$table` CHANGE '$name' $newname $type($length) " . ($null ? "NULL" : "NOT NULL") . $data
       , $flags, "change");
     }
 
