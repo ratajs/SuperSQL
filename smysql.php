@@ -499,14 +499,14 @@
       return $r;
     }
 
-    public function q($q, string ...$a) {
+    public function q($q, ...$a) {
       if($a==[])
         return $this->query($q);
       else
         return $this->queryf($q, $a);
     }
 
-    public function qs(string ...$qs) {
+    public function qs(...$qs) {
       $r = [];
       foreach($qs as $k => $v) {
         $r[] = $this->query($v);
@@ -691,11 +691,11 @@
     public function __isset($k) {
       isset($this->p[$k]);
     }
-    public function s(string ...$qs) {
+    public function s(...$qs) {
       $this->set($qs);
       return $this;
     }
-    public function run(string ...$qs) {
+    public function run(...$qs) {
       $this->set($qs);
       return $this->c->queryf($this->q, $this->p);
     }
