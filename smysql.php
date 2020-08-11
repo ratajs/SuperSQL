@@ -210,9 +210,8 @@
       return $this->result;
     }
 
-    public function charset($charset) {
-      $this->connect->exec("SET NAMES " . $charset);
-      return $charset;
+    public function charset($charset, $flags = 0) {
+      return $this->query("SET NAMES " . $charset, $flags, "charset");
     }
 
     public function fetch($flags = 512) {
@@ -221,8 +220,6 @@
     }
 
     public function deleteDB($db, $flags) {
-      if($db==$this->db)
-        throw new SmysqlException("(deleteDB): You can’t delete current database");
       if($this->query("DROP DATABASE `$db`", $flags, "deleteDB")) {
         return true;
       }
@@ -240,14 +237,18 @@
       $this->reload();
     }
 
-    public function select($table, $order = "", $cols = ["*"], $limit = NULL, $flags = 129) {
-			foreach($cols as $k => $v) {
-				if(gettype($k)!="integer")
-					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
-				elseif($v!="*")
-					$cols[$k] = "`" . $v . "`";
-			};
-      $colsValue = implode(", ", $cols);
+    public function select($table, $order = "", $cols = "*", $limit = NULL, $flags = 129) {
+      if(is_array($cols)) {
+        foreach($cols as $k => $v) {
+  				if(gettype($k)!="integer")
+  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          else
+            $cols[$k] = "`" . $v . "`";
+  			};
+        $colsValue = implode(", ", $cols);
+      }
+      else
+        $colsValue = strval($cols);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
         $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
@@ -256,16 +257,20 @@
       ", $flags, "select");
     }
 
-    public function selectWhere($table, $cond, $order = "", $cols = ["*"], $limit = NULL, $flags = 129, $name = "selectWhere") {
+    public function selectWhere($table, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 129, $name = "selectWhere") {
       $all = !boolval($cond & self::COND_OR);
+      if(is_array($cols)) {
+        foreach($cols as $k => $v) {
+  				if(gettype($k)!="integer")
+  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          else
+            $cols[$k] = "`" . $v . "`";
+  			};
+        $colsValue = implode(", ", $cols);
+      }
+      else
+        $colsValue = strval($cols);
       $condString = $this->getCondString($cond, $all);
-			foreach($cols as $k => $v) {
-				if(gettype($k)!="integer")
-					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
-				elseif($v!="*")
-					$cols[$k] = "`" . $v . "`";
-			};
-      $colsValue = implode(", ", $cols);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
       if(!empty($order))
         $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
@@ -274,7 +279,7 @@
       ", $flags, $name);
     }
 
-    public function selectJoin($table, $join, $on, $order = "", $cols = ["*"], $limit = NULL, $flags = 133) {
+    public function selectJoin($table, $join, $on, $order = "", $cols = "*", $limit = NULL, $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -282,14 +287,19 @@
         case boolval($flags & self::JOIN_FULL): $jt = "FULL OUTER"; break;
         default: $jt = "INNER";
       };
+      if(is_array($cols)) {
+        foreach($cols as $k => $v) {
+  				if(gettype($k)!="integer")
+  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          else
+            $cols[$k] = "`" . $v . "`";
+  			};
+        $colsValue = implode(", ", $cols);
+      }
+      else
+        $colsValue = strval($cols);
       $onString = $this->getCondString($on, $all, true);
-			foreach($cols as $k => $v) {
-				if(gettype($k)!="integer")
-					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
-				elseif($v!="*")
-					$cols[$k] = "`" . $v . "`";
-			};
-      $colsValue = implode(", ", $cols);
+      $condString = $this->getCondString($cond, $all);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
         $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
@@ -300,7 +310,7 @@
       ", $flags, "selectJoin");
     }
 
-    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = ["*"], $limit = NULL, $flags = 133) {
+    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 133) {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -308,15 +318,19 @@
         case boolval($flags & self::JOIN_FULL): $jt = "FULL OUTER"; break;
         default: $jt = "INNER";
       };
+      if(is_array($cols)) {
+        foreach($cols as $k => $v) {
+  				if(gettype($k)!="integer")
+  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          else
+            $cols[$k] = "`" . $v . "`";
+  			};
+        $colsValue = implode(", ", $cols);
+      }
+      else
+        $colsValue = strval($cols);
       $onString = $this->getCondString($on, $all, true);
       $condString = $this->getCondString($cond, $all);
-			foreach($cols as $k => $v) {
-				if(gettype($k)!="integer")
-					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
-				elseif($v!="*")
-					$cols[$k] = "`" . $v . "`";
-			};
-      $colsValue = implode(", ", $cols);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
         $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
@@ -330,7 +344,7 @@
 
     public function exists($table, $cond, $flags = 129, $name = "exists") {
       $all = !boolval($flags & self::COND_OR);
-      $this->selectWhere($table, $cond, "", ["*"], NULL, $flags, $name);
+      $this->selectWhere($table, $cond, "", "*", NULL, $flags, $name);
       $noFetch = !$this->fetch();
       return !$noFetch;
     }
@@ -421,7 +435,7 @@
 
     public function selectAll($table, $flags = 129) {
       $r = $this->result;
-      $this->select($table, "", ["*"], NULL, $flags);
+      $this->select($table, "", "*", NULL, $flags);
       $f = $this->fetch($flags | self::FETCH_ALL);
       $this->result = $r;
       return $f;
@@ -429,7 +443,7 @@
 
     public function fetchWhere($table, $cond, $flags = 129) {
       $r = $this->result;
-      $this->selectWhere($table, $cond, "", ["*"], NULL, $flags);
+      $this->selectWhere($table, $cond, "", "*", NULL, $flags);
       $f = $this->fetch();
       $this->result = $r;
       return $f;
@@ -453,7 +467,7 @@
         else
           return false;
       else {
-        $this->selectWhere($table, $cond, "", ["*"], NULL, $flags);
+        $this->selectWhere($table, $cond, "", "*", NULL, $flags);
         $f = $this->fetch(self::FETCH_ALL);
       };
       if($f===new stdClass() && !boolval($flags & self::ALWAYS_ARRAY))
