@@ -111,7 +111,7 @@ The italic ones are not recognized at all because they are defaults.
   
   
   //Use $smysql->selectJoin($table, $join, $on[, $order[, $cols[, $limit[, $flags]]]]) to execute a JOIN command
-  $result = $smysql->selectJoin("users", "messages", ['from_user' => 'uid'], "time", ["*"], 5, SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
+  $result = $smysql->selectJoin("users", "messages", ['from_user' => 'uid'], "time", "*", 5, SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
   //Use JOIN_LEFT, JOIN_RIGHT and JOIN_FULL flags to other types of JOIN
   
   //To combine JOIN and WHERE use $smysql->selectJoinWhere($table, $join, $on, $cond[, $order[, $cols[, $limit[, $flags]]]])
