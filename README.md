@@ -16,7 +16,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   //Connect with new Smysql($host, $user, $password[, $database])
   $smysql = new Smysql("localhost", "root", "root", "db");
   
-  //To execute raw SQL query use $smysql->q($q[, $a]), FETCH_ALL returns array of rows, FETCH_OBJECT and FETCH_ARRAY return one row per call
+  //To execute raw SQL query use $smysql->q($q[, $a]), FETCH_ALL returns an array of rows, FETCH_OBJECT and FETCH_ARRAY return one row per call
   $smysql->q("SELECT * FROM users")->fetch(SMQ::FETCH_ALL);
   
   //You can use wildcards for escaping
