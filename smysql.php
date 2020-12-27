@@ -11,7 +11,7 @@
   define("SQ_FETCH_OBJECT", 512);
   define("SQ_FETCH_ARRAY", 1024);
   define("SQ_FETCH_ALL", 2048);
-  define("SQ_ALWAYS_ARRAY", 4096);
+  define("SQ_FETCH_SMART", 4096);
   define("SQ_NO_ERROR", 8192);
   class SmysqlException extends Exception {
     public function __construct($e, $code = 0, Throwable $previous = NULL) {
@@ -51,7 +51,7 @@
     const FETCH_OBJECT = 512;
     const FETCH_ARRAY = 1024;
     const FETCH_ALL = 2048;
-    const ALWAYS_ARRAY = 4096;
+    const FETCH_SMART = 4096;
     const NO_ERROR = 8192;
 
     static function open($host = "", $user = "", $password = "", $db = "", &$object = "return") {
@@ -237,7 +237,7 @@
       $this->reload();
     }
 
-    public function select($table, $order = "", $cols = "*", $limit = NULL, $flags = 129) {
+    public function select($table, $order = "", $cols = "*", $limit = NULL, $flags = 129, $name = "select") {
       if(is_array($cols)) {
         foreach($cols as $k => $v) {
   				if(gettype($k)!="integer")
@@ -254,7 +254,7 @@
         $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
       return $this->query("
         SELECT $colsValue FROM `$table`$limitString$order
-      ", $flags, "select");
+      ", $flags, $name);
     }
 
     public function selectWhere($table, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 129, $name = "selectWhere") {
@@ -279,7 +279,7 @@
       ", $flags, $name);
     }
 
-    public function selectJoin($table, $join, $on, $order = "", $cols = "*", $limit = NULL, $flags = 133) {
+    public function selectJoin($table, $join, $on, $order = "", $cols = "*", $limit = NULL, $flags = 133, $name = "selectJoin") {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -299,7 +299,6 @@
       else
         $colsValue = strval($cols);
       $onString = $this->getCondString($on, $all, true);
-      $condString = $this->getCondString($cond, $all);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
         $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
@@ -307,10 +306,10 @@
         SELECT $colsValue
         FROM `$table`
         $jt JOIN `$join` ON $onString$limitString$order
-      ", $flags, "selectJoin");
+      ", $flags, $name);
     }
 
-    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 133) {
+    public function selectJoinWhere($table, $join, $on, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 133, $name = "selectJoinWhere") {
       $all = !boolval($flags & self::COND_OR);
       switch(true) {
         case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -339,7 +338,7 @@
         FROM `$table`
         $jt JOIN `$join` ON $onString
         WHERE $condString$limitString$order
-      ", $flags, "selectJoinWhere");
+      ", $flags, $name);
     }
 
     public function exists($table, $cond, $flags = 129, $name = "exists") {
@@ -449,33 +448,17 @@
       return $f;
     }
 
-    public function read($table, $cond = [], $flags = 129) {
+    public function read($table, $cond = [], $flags = 4225) {
       $r = $this->result;
-      $f = new stdClass();
-      $f->someKey = "nonfalse";
-      if(gettype($cond)=="integer" && $flags==129) {
+      if(gettype($cond)=="integer" && $flags==4225) {
         $flags = $cond;
         $cond = [];
       };
-      if($cond===[]) {
-        $f = $this->selectAll($table);
-        $this->result = $r;
-      }
-      elseif(!$this->exists($table, $cond, $flags, "read"))
-        if(boolval($flags & self::ALWAYS_ARRAY))
-          return [];
-        else
-          return false;
-      else {
+      if($cond===[])
+        $this->select($table);
+      else
         $this->selectWhere($table, $cond, "", "*", NULL, $flags);
-        $f = $this->fetch(self::FETCH_ALL);
-      };
-      if($f===new stdClass() && !boolval($flags & self::ALWAYS_ARRAY))
-        return false;
-      $this->result = $r;
-      if(count($f)==1 && !boolval($flags & self::ALWAYS_ARRAY))
-        return $f[0];
-      return $f;
+      return $this->fetch($flags);
     }
 
     public function createTable($table, $params, $primary = "", $flags = 0) {
@@ -532,6 +515,70 @@
 
     public function p($q) {
       return new SmysqlQuery($this, $q);
+    }
+
+    public function get($table, $options = [], $flags = 4096) {
+      if(gettype($options)=="integer" && $flags==4096) {
+        $flags = $options;
+        $options = [];
+      };
+      if(empty($options['fetch']))
+        $fetch = boolval($flags & self::FETCH_SMART) ? self::FETCH_SMART : (boolval($flags & self::FETCH_ALL) ? self::FETCH_ALL : (boolval($flags & self::FETCH_ARRAY) ? self::FETCH_ARRAY : (boolval($flags & self::FETCH_OBJECT) ? self::FETCH_OBJECT : self::FETCH_SMART)));
+      else
+        $fetch = $options['fetch'];
+      if(($fetch==self::FETCH_ALL || $fetch==self::FETCH_SMART) && boolval($options['fetch'] & self::FETCH_ARRAY))
+        $fetch = $fetch | self::FETCH_ARRAY;
+      if(empty($options['cond_type']))
+        $condtype = boolval($flags & self::COND_OR) ? self::COND_OR : self::COND_AND;
+      else
+        $condtype = $options['cond_type'];
+      if(empty($options['order_type']))
+        $ordertype = boolval($flags & self::ORDER_DESC) ? self::ORDER_DESC : self::ORDER_ASC;
+      else
+        $ordertype = $options['order_type'];
+      if(empty($options['join_type']))
+        $ordertype = boolval($flags & self::JOIN_FULL) ? self::JOIN_FULL : (boolval($flags & self::JOIN_RIGHT) ? self::JOIN_RIGHT : (boolval($flags & self::JOIN_LEFT) ? self::JOIN_LEFT : self::JOIN_INNER));
+      else
+        $ordertype = $options['join_type'];
+      if($flags & self::FETCH_OBJECT)
+        $flags-= self::FETCH_OBJECT;
+      if($flags & self::FETCH_ARRAY)
+        $flags-= self::FETCH_ARRAY;
+      if($flags & self::FETCH_ALL)
+        $flags-= self::FETCH_ALL;
+      if($flags & self::FETCH_SMART)
+        $flags-= self::FETCH_SMART;
+      if($flags & self::COND_AND)
+        $flags-= self::COND_AND;
+      if($flags & self::COND_OR)
+        $flags-= self::COND_OR;
+      if($flags & self::ORDER_ASC)
+        $flags-= self::ORDER_ASC;
+      if($flags & self::ORDER_DESC)
+        $flags-= self::ORDER_DESC;
+      if($flags & self::JOIN_INNER)
+        $flags-= self::JOIN_INNER;
+      if($flags & self::JOIN_LEFT)
+        $flags-= self::JOIN_LEFT;
+      if($flags & self::JOIN_RIGHT)
+        $flags-= self::JOIN_RIGHT;
+      if($flags & self::JOIN_FULL)
+        $flags-= self::JOIN_FULL;
+      $cond = empty($options['cond']) ? false : $options['cond'];
+      $join = empty($options['join']) ? false : $options['join'];
+      $on = empty($options['on']) ? false : $options['on'];
+      $cols = empty($options['cols']) ? "*" : $options['cols'];
+      $order = empty($options['order']) ? "" : $options['order'];
+      $limit = empty($options['limit']) ? NULL : $options['limit'];
+      if(!$cond && (!$join || !$on))
+        $result = $this->select($table, $order, $cols, $limit, $flags | $ordertype);
+      if($cond && (!$join || !$on))
+        $result = $this->selectWhere($table, $cond, $order, $cols, $flags | $condtype | $ordertype);
+      if(!$cond && $join)
+        $result = $this->selectJoin($table, $join, $on, $order, $cols, $flags | $jointype | $ordertype);
+      if($cond && $join)
+        $result = $this->selectJoinWhere($table, $join, $on, $cond, $order, $cols, $flags | $jointype | $condtype | $ordertype);
+      return $this->fetch($flags | $fetch);
     }
 
     private function getCondString($a, $and, $on = false) {
@@ -616,45 +663,97 @@
   };
   class SmysqlResult {
     private $pdos;
+    public $columnCount = 0;
     public function __construct($pdos) {
       $this->pdos = $pdos;
+      $this->columnCount = $this->pdos->columnCount();
+    }
+    public function getColumns() {
+      $columns = [];
+      $i = 0;
+      while($i++<$this->columnCount) {
+        $meta = $this->pdos->getColumnMeta(bcsub($i, 1));
+        $columns[bcsub($i, 1)] = new StdClass();
+        $columns[bcsub($i, 1)]->name = $meta['name'];
+        $columns[bcsub($i, 1)]->table = $meta['table'];
+        if(isset($meta['mysql:decl_type']))
+          $columns[bcsub($i, 1)]->type = $meta['mysql:decl_type'];
+        else {
+          switch($meta['pdo_type']) {
+            case PDO::PARAM_BOOL: $columns[bcsub($i, 1)]->type = "BOOL"; break;
+            case PDO::PARAM_INT: $columns[bcsub($i, 1)]->type = "INT"; break;
+            case PDO::PARAM_STR: $columns[bcsub($i, 1)]->type = $meta['native_type']=="VAR_STRING" ? "VARCHAR" : "CHAR"; break;
+            default: $columns[bcsub($i, 1)]->type = NULL;
+          };
+          if($meta['native_type']=="TINY")
+            $columns[bcsub($i, 1)]->type = "TINYINT";
+          if($meta['native_type']=="DOUBLE")
+            $columns[bcsub($i, 1)]->type = "DOUBLE";
+          if($meta['native_type']=="DATE")
+            $columns[bcsub($i, 1)]->type = "DATE";
+        };
+        $columns[bcsub($i, 1)]->length = $meta['len'];
+        $columns[bcsub($i, 1)]->flags = $meta['flags'];
+        if(isset(array_flip($meta['flags'])['blob'])) {
+          $columns[bcsub($i, 1)]->type = "BLOB";
+          unset($columns[bcsub($i, 1)]->flags[array_flip($meta['flags'])['blob']]);
+        };
+      };
+      return $columns;
     }
     public function fetch($flags = 512) {
       $id = $this->pdos;
-      if(boolval($flags & SMQ::FETCH_ARRAY))
-        $return =  $id->fetch();
-      elseif(boolval($flags & SMQ::FETCH_ALL)) {
+      if(boolval($flags & SMQ::FETCH_ALL) || boolval($flags & SMQ::FETCH_SMART)) {
         $return = [];
-        while($row = $id->fetchObject()) {
+        while($row = (boolval($flags & SMQ::FETCH_ARRAY) ? $id->fetch() : $id->fetchObject())) {
           $return[] = $row;
         };
+        if(boolval($flags & SMQ::FETCH_SMART) && count($return)<2)
+          return count($return)<1 ? false : $return[0];
       }
+      elseif(boolval($flags & SMQ::FETCH_ARRAY))
+        $return = $id->fetch();
       else
-        $return =  $id->fetchObject();
+        $return = $id->fetchObject();
       return $return;
     }
-    public function dump($print = true) {
-      $h = "";
+    public function dump($limit = 256, $columntypes = true, $print = true) {
+      $limit = $limit ? intval($limit) : false;
       $f = $this->fetch(SQ_FETCH_ALL);
+      $h = "";
       $h.= "<table style=\"border-collapse: collapse; margin: 10px;\">";
-      $cc = $this->pdos->columnCount();
-      if($cc>0) {
-        $h.= "<tr>";
+      if($this->columnCount>0) {
+        $columns = $this->getColumns();
+        $tables = [];
+        foreach($columns as $k => $v) {
+          if(!in_array($v->table, $tables))
+            $tables[] = $v->table;
+        };
+        $h.= "<caption>";
+        $h.= implode(", ", $tables);
+        $h.= "</caption><tr>";
         $i = 0;
-        while($i++<$cc) {
+        while($i++<$this->columnCount) {
           $h.= "<th style=\"border: 1px solid black; background-color: #ccf; padding: 5px;\">";
-          $h.= $this->pdos->getColumnMeta(bcsub($i, 1))['name'];
+          if(count($tables) > 1)
+            $h.= $columns[bcsub($i, 1)]->table . ".";
+          $h.= $columns[bcsub($i, 1)]->name;
+          $h.= "<small style=\"opacity: .75\">&nbsp;&ndash;&nbsp;<em>";
+          $h.= $columns[bcsub($i, 1)]->type;
+          $h.= "</em></small>";
           $h.= "</th>";
         };
         $h.= "</tr>";
       };
-      if(count($f)==0 && $cc>0)
-        $h.= "<tr><td colspan=\"" . $cc . "\" style=\"border: 1px solid black; padding: 5px;\"><em>No rows returned</em></td></tr>";
-      elseif($cc>0) {
+      if(count($f)==0 && $this->columnCount>0)
+        $h.= "<tr><td colspan=\"" . $this->columnCount . "\" style=\"border: 1px solid black; padding: 5px;\"><em>No rows returned</em></td></tr>";
+      elseif($this->columnCount>0) {
         foreach($f as $k => $v) {
           $h.= "<tr>";
-          foreach($v as $val) {
-            $h.= "<td style=\"border: 1px solid black; padding: 5px; text-align: center;\">" . ($val===NULL ? "<em>NULL</em>" : ("<pre>" . str_replace(["\n", "\r"], "", nl2br(htmlspecialchars($val, ENT_QUOTES, "UTF-8"))) . "</pre>")) . "</td>";
+          $i = 0;
+          foreach($v as $key => $val) {
+            $h.= "<td style=\"border: 1px solid black; padding: 5px; text-align: center;\">" . ($val===NULL ? "<em>NULL</em>" : ($limit && (strlen($val)>$limit) ? "<em>Value longer than " . $limit . " bytes</em>" : ("<pre>" . ($columns[$i]->type=="BLOB" ? ("<strong>HEX: </strong><em>" . bin2hex($val) . "</em>") : str_replace(["\n", "\r"], "", nl2br(htmlspecialchars($val, ENT_QUOTES, "UTF-8")))) . "</pre>"))) . "</td>";
+            $i++;
           };
           $h.= "<tr>";
         };
@@ -668,7 +767,7 @@
       return $h;
     }
     public function __toString() {
-      return $this->dump(false);
+      return $this->dump(256, true, false);
     }
     public function __destruct() {
       $this->pdos = NULL;
