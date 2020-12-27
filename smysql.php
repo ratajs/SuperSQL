@@ -526,7 +526,7 @@
         $fetch = boolval($flags & self::FETCH_SMART) ? self::FETCH_SMART : (boolval($flags & self::FETCH_ALL) ? self::FETCH_ALL : (boolval($flags & self::FETCH_ARRAY) ? self::FETCH_ARRAY : (boolval($flags & self::FETCH_OBJECT) ? self::FETCH_OBJECT : self::FETCH_SMART)));
       else
         $fetch = $options['fetch'];
-      if(($fetch==self::FETCH_ALL || $fetch==self::FETCH_SMART) && boolval($options['fetch'] & self::FETCH_ARRAY))
+      if(($fetch==self::FETCH_ALL || $fetch==self::FETCH_SMART) && boolval($flags & self::FETCH_ARRAY))
         $fetch = $fetch | self::FETCH_ARRAY;
       if(empty($options['cond_type']))
         $condtype = boolval($flags & self::COND_OR) ? self::COND_OR : self::COND_AND;
@@ -537,9 +537,9 @@
       else
         $ordertype = $options['order_type'];
       if(empty($options['join_type']))
-        $ordertype = boolval($flags & self::JOIN_FULL) ? self::JOIN_FULL : (boolval($flags & self::JOIN_RIGHT) ? self::JOIN_RIGHT : (boolval($flags & self::JOIN_LEFT) ? self::JOIN_LEFT : self::JOIN_INNER));
+        $jointype = boolval($flags & self::JOIN_FULL) ? self::JOIN_FULL : (boolval($flags & self::JOIN_RIGHT) ? self::JOIN_RIGHT : (boolval($flags & self::JOIN_LEFT) ? self::JOIN_LEFT : self::JOIN_INNER));
       else
-        $ordertype = $options['join_type'];
+        $jointype = $options['join_type'];
       if($flags & self::FETCH_OBJECT)
         $flags-= self::FETCH_OBJECT;
       if($flags & self::FETCH_ARRAY)
@@ -571,13 +571,13 @@
       $order = empty($options['order']) ? "" : $options['order'];
       $limit = empty($options['limit']) ? NULL : $options['limit'];
       if(!$cond && (!$join || !$on))
-        $result = $this->select($table, $order, $cols, $limit, $flags | $ordertype);
+        $result = $this->select($table, $order, $cols, $limit, $flags | $ordertype, "get");
       if($cond && (!$join || !$on))
-        $result = $this->selectWhere($table, $cond, $order, $cols, $flags | $condtype | $ordertype);
+        $result = $this->selectWhere($table, $cond, $order, $cols, $limit, $flags | $condtype | $ordertype, "get");
       if(!$cond && $join)
-        $result = $this->selectJoin($table, $join, $on, $order, $cols, $flags | $jointype | $ordertype);
+        $result = $this->selectJoin($table, $join, $on, $order, $cols, $limit, $flags | $jointype | $ordertype, "get");
       if($cond && $join)
-        $result = $this->selectJoinWhere($table, $join, $on, $cond, $order, $cols, $flags | $jointype | $condtype | $ordertype);
+        $result = $this->selectJoinWhere($table, $join, $on, $cond, $order, $cols, $limit, $flags | $jointype | $condtype | $ordertype, "get");
       return $this->fetch($flags | $fetch);
     }
 
