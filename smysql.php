@@ -240,40 +240,40 @@
     public function select($table, $order = "", $cols = "*", $limit = NULL, $flags = 129, $name = "select") {
       if(is_array($cols)) {
         foreach($cols as $k => $v) {
-  				if(gettype($k)!="integer")
-  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          if(gettype($k)!="integer")
+            $cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
           else
             $cols[$k] = "`" . $v . "`";
-  			};
+        };
         $colsValue = implode(", ", $cols);
       }
       else
         $colsValue = strval($cols);
-			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
-			if(!empty($order))
-        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+      $limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+      if(!empty($order))
+        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
       return $this->query("
         SELECT $colsValue FROM `$table`$limitString$order
       ", $flags, $name);
     }
 
     public function selectWhere($table, $cond, $order = "", $cols = "*", $limit = NULL, $flags = 129, $name = "selectWhere") {
-      $all = !boolval($cond & self::COND_OR);
+      $all = !boolval($flags & self::COND_OR);
       if(is_array($cols)) {
         foreach($cols as $k => $v) {
-  				if(gettype($k)!="integer")
-  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          if(gettype($k)!="integer")
+            $cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
           else
             $cols[$k] = "`" . $v . "`";
-  			};
+        };
         $colsValue = implode(", ", $cols);
       }
       else
         $colsValue = strval($cols);
       $condString = $this->getCondString($cond, $all);
-			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+      $limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
       if(!empty($order))
-        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+        $order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
       return $this->query("
         SELECT $colsValue FROM `$table` WHERE $condString$limitString$order
       ", $flags, $name);
@@ -289,19 +289,19 @@
       };
       if(is_array($cols)) {
         foreach($cols as $k => $v) {
-  				if(gettype($k)!="integer")
-  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          if(gettype($k)!="integer")
+            $cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
           else
             $cols[$k] = "`" . $v . "`";
-  			};
+        };
         $colsValue = implode(", ", $cols);
       }
       else
         $colsValue = strval($cols);
       $onString = $this->getCondString($on, $all, true);
-			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
-			if(!empty($order))
-        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+      $limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+      if(!empty($order))
+        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
       return $this->query("
         SELECT $colsValue
         FROM `$table`
@@ -319,20 +319,20 @@
       };
       if(is_array($cols)) {
         foreach($cols as $k => $v) {
-  				if(gettype($k)!="integer")
-  					$cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
+          if(gettype($k)!="integer")
+            $cols[$k] = "`" . $v . "`" . " AS " . "`" . $k . "`";
           else
             $cols[$k] = "`" . $v . "`";
-  			};
+        };
         $colsValue = implode(", ", $cols);
       }
       else
         $colsValue = strval($cols);
       $onString = $this->getCondString($on, $all, true);
       $condString = $this->getCondString($cond, $all);
-			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
-			if(!empty($order))
-        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? "DESC" : "ASC");
+      $limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
+      if(!empty($order))
+        $order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
       return $this->query("
         SELECT $colsValue
         FROM `$table`
@@ -597,20 +597,20 @@
             };
             if(!is_numeric($v2))
               $v3 = $this->escape($v2);
-						if(is_numeric($k))
-							$r.= $v;
-						else {
-							$r.= "`" . $this->escape($k) . "`";
-							$r.= " = ";
-							if(is_numeric($v3))
-								$v3 = intval($v3);
-							if($v3===NULL)
-								$r.= "IS NULL";
-							elseif(is_numeric($v3))
-								$r.= $v;
-							else
-								$r.= ($on || $col) ? "`$v3`" : "'$v3'";
-						};
+            if(is_numeric($k))
+              $r.= $v;
+            else {
+              $r.= "`" . $this->escape($k) . "`";
+              $r.= " = ";
+              if(is_numeric($v3))
+                $v3 = intval($v3);
+              if($v3===NULL)
+                $r.= "IS NULL";
+              elseif(is_numeric($v3))
+                $r.= $v;
+              else
+                $r.= ($on || $col) ? "`$v3`" : "'$v3'";
+            };
             $r.= $and ? " AND " : " OR ";
           };
           return rtrim($r, $and ? " AND " : " OR ");
@@ -625,18 +625,18 @@
           };
           if(!is_numeric($v))
             $v = $this->escape($v);
-					if(is_numeric($k))
-						$r.= $v;
-					else {
-						$r.= "`" . $this->escape($k) . "`";
-						$r.= " = ";
-						if(is_numeric($v))
-							$v = intval($v);
-						if(is_numeric($v))
-							$r.= $v;
-						else
-							$r.= ($on || $col) ? "`$v`" : "'$v'";
-					};
+          if(is_numeric($k))
+            $r.= $v;
+          else {
+            $r.= "`" . $this->escape($k) . "`";
+            $r.= " = ";
+            if(is_numeric($v))
+              $v = intval($v);
+            if(is_numeric($v))
+              $r.= $v;
+            else
+              $r.= ($on || $col) ? "`$v`" : "'$v'";
+          };
           $r.= $and ? " AND " : " OR ";
         };
       };
@@ -682,7 +682,7 @@
           switch($meta['pdo_type']) {
             case PDO::PARAM_BOOL: $columns[bcsub($i, 1)]->type = "BOOL"; break;
             case PDO::PARAM_INT: $columns[bcsub($i, 1)]->type = "INT"; break;
-            case PDO::PARAM_STR: $columns[bcsub($i, 1)]->type = $meta['native_type']=="VAR_STRING" ? "VARCHAR" : "CHAR"; break;
+            case PDO::PARAM_STR: $columns[bcsub($i, 1)]->type = $meta['native_type']=="VAR_STRING" ? "VARCHAR" : ($meta['native_type']=="LONGLONG" ? "BIGINT" : "CHAR"); break;
             default: $columns[bcsub($i, 1)]->type = NULL;
           };
           if($meta['native_type']=="TINY")
