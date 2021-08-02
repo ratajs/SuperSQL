@@ -13,13 +13,13 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   include "ssql.php";
 
   //Connect with new Ssql($host[, $user[, $password[, $database]]])
-  $ssql = new Ssql("localhost", "root", "root", "db");
+  $ssql = new Ssql("localhost", "root", "root", "db"); // MySQL
   
   //Connect to SQLite with just the first parameter
   $ssql = new Ssql("db.sqlite");
   
   //To execute raw SQL query use $ssql->q($q[, $a]), FETCH_ALL returns an array of rows, FETCH_OBJECT and FETCH_ARRAY return one row per call
-  $ssql->q("SELECT * FROM users")->fetch(SMQ::FETCH_ALL);
+  $ssql->q("SELECT * FROM users")->fetch(SQ::FETCH_ALL);
   
   //You can use wildcards for escaping
   $ssql->q("SELECT * FROM users WHERE `username`=%0 OR `nickname`=%1", [$name, $nick])->fetch();
@@ -30,23 +30,23 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
 
   //For simple requests use $ssql->read($table[, $flags]) or $ssql->read($table, $cond[, $flags])
   //Read function uses FETCH_SMART as default (FETCH_OBJECT for one row, FETCH_ALL for more), so you need to use the FETCH_ALL flag to return an array even when there is only one result
-  $users = $ssql->read("users", SMQ::FETCH_ALL);
+  $users = $ssql->read("users", SQ::FETCH_ALL);
   $user = $ssql->read("users", ['uid' => $id]);
   
   //You can use more conditions
   $user = $ssql->read("users", ['username' => $name, 'password' => $pass]);
   
   //You can use the COND_OR flag for OR operator instead of AND
-  $user = $ssql->read("users", ['username' => $name, 'nickname' => $nick], SMQ::FETCH_ALL | SMQ::COND_OR)[0];
+  $user = $ssql->read("users", ['username' => $name, 'nickname' => $nick], SQ::FETCH_ALL | SQ::COND_OR)[0];
   
   //You can use custom conditions
   $users = $ssql->read("users", "`sign_up_time` > " . bcsub(time(), 3600));
   
   //You can use more of them
-  $users = $ssql->read("users", ["`sign_up_time` > " . bcsub(time(), 3600), "`nickname` IS NOT NULL"], SMQ::FETCH_ALL);
+  $users = $ssql->read("users", ["`sign_up_time` > " . bcsub(time(), 3600), "`nickname` IS NOT NULL"], SQ::FETCH_ALL);
 
   //For more complicated requests use $ssql->select($table[, $order[, $cols[, $limit[, $flags]]]]), you can use array keys for aliases
-  $users = $ssql->select("users", "sign_up_time", ['id' => "uid", 'name' => "username", "sign_up_time", "nickname"], NULL, SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
+  $users = $ssql->select("users", "sign_up_time", ['id' => "uid", 'name' => "username", "sign_up_time", "nickname"], NULL, SQ::ORDER_DESC)->fetch(SQ::FETCH_ALL);
 
   //Or $ssql->selectWhere($table, $cond[, $order[, $cols[, $limit[, $flags]]]])
   $user = $ssql->selectWhere("users", ['uid' => $id], "name", ['id' => "uid", 'name' => "username", "sign_up_time", 'nick' => "nickname"])->fetch();
@@ -61,7 +61,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $ssql->insert("users", ['username' => $name, 'password' => $pass, 'sign_up_time' => time()]);
   
   //You can use INSERT_RETURN_ID flag for returning the first auto increment col value (depends on the database type)
-  $id = $ssql->insert("users", ['username' => $name, 'password' => $pass, 'sign_up_time' => time()], SMQ::INSERT_RETURN_ID);
+  $id = $ssql->insert("users", ['username' => $name, 'password' => $pass, 'sign_up_time' => time()], SQ::INSERT_RETURN_ID);
   
   //Use $ssql->update($table, $cond, $values[, $flags]) to update rows
   $ssql->update("users", ['id' => $id], ['nickname' => $nick]);
@@ -112,11 +112,11 @@ Here is list of all SuperSQL flags:
   
   
   //Use $ssql->selectJoin($table, $join, $on[, $order[, $cols[, $limit[, $flags]]]]) to execute a JOIN command
-  $result = $ssql->selectJoin("users", "messages", ['from_user' => 'uid'], "time", "*", 5, SMQ::ORDER_DESC)->fetch(SMQ::FETCH_ALL);
+  $result = $ssql->selectJoin("users", "messages", ['from_user' => 'uid'], "time", "*", 5, SQ::ORDER_DESC)->fetch(SQ::FETCH_ALL);
   //Use JOIN_LEFT, JOIN_RIGHT and JOIN_FULL flags to other types of JOIN
   
   //To combine JOIN and WHERE use $ssql->selectJoinWhere($table, $join, $on, $cond[, $order[, $cols[, $limit[, $flags]]]])
-  $result = $ssql->selectJoinWhere("users", "messages", ['from_user' => 'uid'], ['from_user' => $uid])->fetch(SMQ::FETCH_ALL);
+  $result = $ssql->selectJoinWhere("users", "messages", ['from_user' => 'uid'], ['from_user' => $uid])->fetch(SQ::FETCH_ALL);
   
   
   
