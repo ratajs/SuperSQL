@@ -141,6 +141,7 @@
 		}
 
 		public function reload() {
+			$this->connect = NULL;
 			$this->__construct();
 		}
 
@@ -150,6 +151,8 @@
 			$qr = $this->connect->query($query);
 			if(!$qr && !($flags & self::NO_ERROR))
 				throw new SSQLException("(" . $fnc . "): Database error: <em>" . $this->connect->errorInfo()[2] . "</em> <strong>SQL command:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
+			elseif(!$qr)
+				return false;
 			$this->result = new SSQLResult($qr);
 			return $this->result;
 		}
@@ -403,7 +406,14 @@
 			$valueString = "";
 			foreach($values as $key => $value) {
 				if($key!=array_keys($values, array_values($values)[0])[0]) $valueString.= ", ";
-				$valueString.= $value===NULL ? "NULL" : ("'" . $this->escape($value) . "'");
+				if($value===NULL)
+					$valueString.= "NULL";
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value))
+					$valueString.= "'" . $this->escape($value) . "'";
+				elseif($this->SQLite)
+					$valueString.= "x'" . bin2hex($value) . "'";
+				else
+					$valueString.= "0x" . bin2hex($value);
 			};
 			$r = $this->query("
 				INSERT INTO $table$colString VALUES ($valueString)
@@ -426,7 +436,15 @@
 			foreach($values as $key => $value) {
 				if($string!="")
 					$string.= ", ";
-				$string.= "`" . $this->escape($key) . "`=" . ($value===NULL ? "NULL" : ("'" . $this->escape($value) . "'"));
+				$string.= "`" . $this->escape($key) . "`=";
+				if($value===NULL)
+					$string.= "NULL";
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value))
+					$string.= "'" . $this->escape($value) . "'";
+				elseif($this->SQLite)
+					$string.= "x'" . bin2hex($value) . "'";
+				else
+					$string.= "0x" . bin2hex($value);
 			};
 			return $this->query("
 				UPDATE `$table` SET $string WHERE $condString
@@ -671,7 +689,7 @@
 			return rtrim($r, $and ? " AND " : " OR ");
 		}
 		public function __debugInfo() {
-			return ['host' => $this->host, 'user' => $this->user, 'password' => preg_replace("/./", "*", $this->password), 'database' => $this->db, 'lastError' => $this->connect->errorInfo()];
+			return ['db' => ($this->SQLite ? "SQLite" : "MySQL"), ($this->SQLite ? 'file' : 'host') => $this->host, 'user' => $this->user, 'password' => preg_replace("/./", "*", $this->password), 'database' => $this->db, 'lastError' => $this->connect->errorInfo()];
 		}
 		public function __sleep() {
 			if($this->result instanceof PDOStatement)
