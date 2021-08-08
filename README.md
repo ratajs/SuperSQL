@@ -140,6 +140,6 @@ Here is list of all SuperSQL flags:
   $c->deleteTable("myTable");
   
   //To see a list of all tables in your database use $ssql->tableList([$flags])
-  $c->tableList();
+  print_r($c->tableList());
 ?>
 ```
