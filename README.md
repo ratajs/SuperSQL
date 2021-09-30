@@ -6,7 +6,7 @@ SuperSQL is an easy-to-use powerful SQL query builder for SQLite and MySQL.
 * PDO SQLite / MySQL driver
 
 ## Setup
-* Download the <em>ssql.php</em> file ([[https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php]])
+* Download the <em>ssql.php</em> file ([https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php](https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php))
 * Include the file with `include` / `require`
 
 ## Examples
