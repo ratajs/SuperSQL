@@ -5,6 +5,10 @@ SuperSQL is an easy-to-use powerful SQL query builder for SQLite and MySQL.
 * PHP 5.6+
 * PDO SQLite / MySQL driver
 
+## Setup
+* Download the <em>ssql.php</em> file (https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php)
+* Include the file with `include` / `require`
+
 ## Examples
 Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `username`, `password`, `sign_up_time` and `nickname`
 
