@@ -154,13 +154,13 @@ Here is list of all SuperSQL flags:
   $ssql->read("users", $ssql->cond()->eq("username", "nickname")->gte("sign_up_time", time() - 3600));
   
   //Use arrays to differentiate string values from column names and to specify more alternatives, the COND_OR flag is also supported
-  //This will select users that have username either "ratajs" or "admin" or that have username "RatajS"
+  //This will select users that have username either "ratajs" or "admin" or that have nickname "RatajS"
   $ssql->read("users", $ssql->cond()->eq("username", ["ratajs", "admin"])->eq("nickname", ["RatajS"], SQ::COND_OR));
   
   //->not() negates the condition, this will select users with usernames other than admin
   $ssql->read("users", $ssql->cond()->eq("username", ["admin"])->not());
   
-  //It can also add another condition, this will select user that don’t have any nickname and with username other that "admin" or "root".
+  //You can also add another condition, this will select users that don’t have any nickname with username other than "admin" or "root".
   $ssql->read("users", $ssql->cond()->eq("nickname", [""])->not($ssql->cond()->eq("username", ["admin", "root"])));
   
   //Supported condition functions: ->eq(), ->lt(), ->gt(), ->lte(), ->gte(), ->like() and ->between()
