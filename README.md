@@ -160,7 +160,7 @@ Here is list of all SuperSQL flags:
   //->not() negates the condition, this will select users with usernames other than admin
   $ssql->read("users", $ssql->cond()->eq("username", ["admin"])->not());
   
-  //You can also add another condition, this will select users that don’t have any nickname with username other than "admin" or "root".
+  //You can also pass another condition to it, this will select users that don’t have any nickname with username other than "admin" or "root".
   $ssql->read("users", $ssql->cond()->eq("nickname", [""])->not($ssql->cond()->eq("username", ["admin", "root"])));
   
   //Supported condition functions: ->eq(), ->lt(), ->gt(), ->lte(), ->gte(), ->like() and ->between()
