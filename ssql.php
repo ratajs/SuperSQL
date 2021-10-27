@@ -90,11 +90,11 @@
 				$this->host = $host;
 				$this->SQLite = true;
 				if(!file_exists($host) && !@touch($host))
-					throw new SSQLException("(__construct): Can’t create SQLite database");
+					throw new SSQLException("(__construct): Cannot create SQLite database");
 				try {
 					$this->connect = @new PDO("sqlite:" . $host);
 				} catch(PDOException $e) {
-					throw new SSQLException("(__construct): Can’t connect to SQLite: " . $e->getMessage());
+					throw new SSQLException("(__construct): Cannot connect to SQLite: " . $e->getMessage());
 				};
 				return true;
 			};
@@ -108,16 +108,16 @@
 				if(!$this->query("
 					CREATE DATABASE $new
 					", "__construct"))
-					throw new SSQLException("(__construct): Can’t create database " . $new);
+					throw new SSQLException("(__construct): Cannot create database " . $new);
 				$this->connect = NULL;
 			};
 			try {
 				$this->connect = @new PDO("mysql:" . (empty($database) ? "" : "dbname=" . $database . ";") . "host=" . $host . ";charset=utf8", $user, $password);
 			} catch(PDOException $e) {
-				throw new SSQLException("(__construct): Can’t connect to MySQL: " . $e->getMessage());
+				throw new SSQLException("(__construct): Cannot connect to MySQL: " . $e->getMessage());
 			}
 			if($this->connect->errorCode() && $this->connect) {
-				throw new SSQLException("(__construct): Can’t select MySQL database:" . $this->connect->errorInfo()[2]);
+				throw new SSQLException("(__construct): Cannot select MySQL database:" . $this->connect->errorInfo()[2]);
 				$this->connect->close();
 			};
 		}
@@ -248,7 +248,7 @@
 				return true;
 			}
 			else {
-				throw new SSQLException("(deleteDB): Can’t delete database " . $db);
+				throw new SSQLException("(deleteDB): Cannot delete database " . $db);
 				return false;
 			};
 		}
