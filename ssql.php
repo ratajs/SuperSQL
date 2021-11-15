@@ -13,6 +13,7 @@
 	define("SQ_FETCH_ALL", 2048);
 	define("SQ_FETCH_SMART", 4096);
 	define("SQ_NO_ERROR", 8192);
+	define("SQ_DEBUG", 16384);
 	class SSQLException extends Exception {
 		public function __construct($e, $code = 0, Throwable $previous = NULL) {
 			$gt = $this->getTrace();
@@ -56,6 +57,7 @@
 		const FETCH_ALL = 2048;
 		const FETCH_SMART = 4096;
 		const NO_ERROR = 8192;
+		const DEBUG = 16384;
 
 		static function open($host = "", $user = "", $password = "", $db = "", &$object = "return") {
 			if($object=="return")
@@ -146,11 +148,14 @@
 		}
 
 		public function query($query, $flags = 0, $fnc = "Query") {
+			$query = trim($query);
+			if($flags & self::DEBUG)
+				print "<strong>" . ucwords($fnc) . ":</strong> <span style=\"font-family: monospace\">" . htmlentities($query) . "</span>";
 			if(empty($this->db) && !$this->SQLite && !in_array($fnc, ["__construct", "changeDB", "dbList"]))
 				throw new SSQLException("(" . $fnc . "): No database selected");
 			$qr = $this->connect->query($query);
 			if(!$qr && !($flags & self::NO_ERROR))
-				throw new SSQLException("(" . $fnc . "): Database error: <em>{$this->connect->errorInfo()[2]}</em> <strong>SQL command:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
+				throw new SSQLException("(" . $fnc . "): Database error: <em>{$this->connect->errorInfo()[2]}</em> <strong>SQL query:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
 			elseif(!$qr)
 				return false;
 			$this->result = new SSQLResult($qr);
