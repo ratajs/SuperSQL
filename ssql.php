@@ -75,6 +75,7 @@
 		protected $db;
 		public $SQLite = false;
 		protected $fncs = [];
+		public $debug = false;
 		public function __construct($host = "", $user = "", $password = "", $database = "") {
 			if(empty($host)) {
 				if(!empty($this->host)) {
@@ -149,8 +150,8 @@
 
 		public function query($query, $flags = 0, $fnc = "Query") {
 			$query = trim($query);
-			if($flags & self::DEBUG)
-				print "<strong>" . ucwords($fnc) . ":</strong> <span style=\"font-family: monospace\">" . htmlentities($query) . "</span>";
+			if($flags & self::DEBUG || $this->debug)
+				print "<pre><strong>" . ucwords($fnc) . ":</strong> " . htmlentities($query) . "</pre>";
 			if(empty($this->db) && !$this->SQLite && !in_array($fnc, ["__construct", "changeDB", "dbList"]))
 				throw new SSQLException("(" . $fnc . "): No database selected");
 			$qr = $this->connect->query($query);
