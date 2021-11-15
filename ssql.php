@@ -32,10 +32,10 @@
 		}
 		public function __toString() {
 			ob_start();
-			trigger_error("<strong>SuperSQL error</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
+			trigger_error("<strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
 			ob_clean();
 			if(ini_get("display_errors"))
-				die("<br /><strong>SuperSQL error</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
+				die("<br /><strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
 			else
 				exit;
 			return "<strong>SuperSQL error</strong> " . $this->message;
@@ -105,7 +105,7 @@
 			$this->user = $user;
 			$this->password = $password;
 			$this->db = $database;
-			if(str_replace("create[", "", $database)!=$database && end(str_split($database))=="]") {
+			if(str_replace("create[", "", $database)!=$database && $split = str_split($database) && end($split)=="]") {
 				$new = str_replace("]", "", str_replace("create[", "", $database));
 				$this->connect = @new PDO("mysql:host=" . $host, $user, $password);
 				if(!$this->query("
@@ -118,7 +118,7 @@
 				$this->connect = @new PDO("mysql:" . (empty($database) ? "" : "dbname=" . $database . ";") . "host=" . $host . ";charset=utf8", $user, $password);
 			} catch(PDOException $e) {
 				throw new SSQLException("(__construct): Cannot connect to MySQL: " . $e->getMessage());
-			}
+			};
 			if($this->connect->errorCode() && $this->connect) {
 				throw new SSQLException("(__construct): Cannot select MySQL database:" . $this->connect->errorInfo()[2]);
 				$this->connect->close();
@@ -154,7 +154,14 @@
 				print "<pre><strong>" . ucwords($fnc) . ":</strong> " . htmlentities($query) . "</pre>";
 			if(empty($this->db) && !$this->SQLite && !in_array($fnc, ["__construct", "changeDB", "dbList"]))
 				throw new SSQLException("(" . $fnc . "): No database selected");
-			$qr = $this->connect->query($query);
+			try {
+				$qr = $this->connect->query($query);
+			} catch(PDOException $e) {
+				if($flags & self::NO_ERROR)
+					return false;
+				else
+					throw new SSQLException("(" . $fnc . "): Database error: <em>{$e->getMessage()}</em> <strong>SQL query:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
+			};
 			if(!$qr && !($flags & self::NO_ERROR))
 				throw new SSQLException("(" . $fnc . "): Database error: <em>{$this->connect->errorInfo()[2]}</em> <strong>SQL query:</strong> <code>" . (empty($query) ? "<em>Missing</em>" : $query) . "</code>");
 			elseif(!$qr)
