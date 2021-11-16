@@ -35,7 +35,7 @@
 			trigger_error("<strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
 			ob_clean();
 			if(ini_get("display_errors"))
-				die("<br /><strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
+				die((empty(ini_get("error_prepend_string")) ? "" : ini_get("error_prepend_string")) . "<br /><strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong><br />" . (empty(ini_get("error_append_string")) ? "" : ini_get("error_append_string")));
 			else
 				exit;
 			return "<strong>SuperSQL error</strong> " . $this->message;
