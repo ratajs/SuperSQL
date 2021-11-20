@@ -994,6 +994,68 @@
 				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` BETWEEN `" . $this->c->escape($a) . "` AND `" . $this->c->escape($b) . "`") . ($append ? ")" : "");
 			return $this;
 		}
+		public function in($k, $v, $flags = 128) {
+			$append = !empty($this->cond);
+			if(!is_array($v))
+				throw new SmysqlException("\$v expected to be an array, " . gettxpe($v) . " received");
+			if(count($v) < 1)
+				return false;
+			$values = array_map(function($n) {
+				if(is_int($n) || is_float($n))
+					return strval($n);
+				if(is_array($n))
+					return implode(", ", array_map(function($n2) {
+						if(is_int($n2) || is_float($n2))
+							return strval($n2);
+						return "\"" . $this->c->escape($n2) . "\"";
+					}, $n));
+				return "`" . $this->c->escape($n) . "`";
+			}, $v);
+			$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` IN (" . implode(", ", $values) . ")") . ($append ? ")" : "");
+			return $this;
+		}
+		public function begins($k, $v, $flags = 128) {
+			$append = !empty($this->cond);
+			if(is_int($v) || is_float($v)) {
+				$v = [$v];
+				$quotes = "";
+			};
+			if(is_array($v) && count($v) < 1)
+				return false;
+			if(is_array($v))
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE \"" . $this->c->escape($v[0]) . "%\"") : ("(`" . $this->c->escape($k) . "` LIKE \"" . $this->c->escape(array_shift($v)) . "%\") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+			else
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT(`" . $this->c->escape($v) . "`, \"%\")") . ($append ? ")" : "");
+			return $this;
+		}
+		public function ends($k, $v, $flags = 128) {
+			$append = !empty($this->cond);
+			if(is_int($v) || is_float($v)) {
+				$v = [$v];
+				$quotes = "";
+			};
+			if(is_array($v) && count($v) < 1)
+				return false;
+			if(is_array($v))
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE \"%" . $this->c->escape($v[0]) . "\"") : ("(`" . $this->c->escape($k) . "` LIKE \"%" . $this->c->escape(array_shift($v)) . "\") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+			else
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT(\"%\", `" . $this->c->escape($v) . "`)") . ($append ? ")" : "");
+			return $this;
+		}
+		public function contains($k, $v, $flags = 128) {
+			$append = !empty($this->cond);
+			if(is_int($v) || is_float($v)) {
+				$v = [$v];
+				$quotes = "";
+			};
+			if(is_array($v) && count($v) < 1)
+				return false;
+			if(is_array($v))
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE \"%" . $this->c->escape($v[0]) . "%\"") : ("(`" . $this->c->escape($k) . "` LIKE \"%" . $this->c->escape(array_shift($v)) . "%\") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+			else
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT(\"%\", `" . $this->c->escape($v) . "`, \"%\")") . ($append ? ")" : "");
+			return $this;
+		}
 
 		public function not($cond = "", $flags = 128) {
 			if(!empty($cond) && empty($this->cond))
