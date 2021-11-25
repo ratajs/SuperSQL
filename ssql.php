@@ -396,7 +396,7 @@
 			return $this->query($query, $flags, "truncate");
 		}
 
-		public function insert(string $table, array $values, int $flags = 0) {
+		public function insert(string $table, array $values, int $flags = 0, string $name = "insert") {
 			$cols = [""];
 			$useCols = true;
 			foreach($values as $k => $v) {
@@ -430,19 +430,19 @@
 			};
 			$r = $this->query("
 				INSERT INTO {$table}{$colString} VALUES ({$valueString})
-			", $flags, "insert");
+			", $flags, $name);
 			return (boolval($flags & self::INSERT_RETURN_ID) ? $this->connect->lastInsertId() : $r);
 		}
 
-		public function delete(string $table, $cond, int $flags = 128) {
+		public function delete(string $table, $cond, int $flags = 128, string $name = "delete") {
 			$all = !boolval($flags & self::COND_OR);
 			$condString = $this->getCondString($cond, $all);
 			return $this->query("
 				DELETE FROM `{$table}` WHERE {$condString}
-			", $flags, "delete");
+			", $flags, $name);
 		}
 
-		public function update(string $table, $cond, array $values, int $flags = 128) {
+		public function update(string $table, $cond, array $values, int $flags = 128, string $name = "update") {
 			$all = !boolval($flags & self::COND_OR);
 			$condString = $this->getCondString($cond, $all);
 			$string = "";
@@ -461,7 +461,7 @@
 			};
 			return $this->query("
 				UPDATE `{$table}` SET {$string} WHERE {$condString}
-			", $flags, "update");
+			", $flags, $name);
 		}
 
 		public function add(string $table, string $name, string $type, int $length, bool $null, string $where, string$key, string $data = "", int $flags = 0) {
@@ -638,6 +638,18 @@
 			if($cond && $join)
 				$result = $this->selectJoinWhere($table, $join, $on, $cond, $order, $cols, $limit, $flags | $jointype | $condtype | $ordertype, "get");
 			return $this->fetch($flags | $fetch);
+		}
+		
+		public function put(string $table, $data, $cond = NULL, int $flags = 0) {
+			if(is_int($cond) && $flags==0) {
+				$flags = $cond;
+				$cond = NULL;
+			};
+			if(empty($cond))
+				return $this->insert($table, $data, $flags, "put");
+			if($data===NULL)
+				return $this->delete($table, $cond, $flags, "put");
+			return $this->update($table, $cond, $data, $flags, "put");
 		}
 
 		public function cond($cond = "") {
