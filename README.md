@@ -6,7 +6,7 @@ SuperSQL is an easy-to-use powerful SQL query builder for SQLite and MySQL.
 * PDO SQLite / MySQL driver
 
 ## Setup
-* Download the <em>ssql.php</em> file ([https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php](https://raw.githubusercontent.com/ratajs/SuperSQL/2.1/ssql.php))
+* Download the <em>ssql.php</em> file ([https://raw.githubusercontent.com/ratajs/SuperSQL/2.2/ssql.php](https://raw.githubusercontent.com/ratajs/SuperSQL/2.2/ssql.php))
 * Include the file with `include` / `require`
 
 ## Examples
@@ -20,7 +20,7 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   $ssql = new Ssql("localhost", "root", "root", "db"); // MySQL
   
   //Connect to SQLite with just the first parameter
-  $ssql = new Ssql("db.sqlite");
+  $ssql = new Ssql("db.sqlite3");
   
   //To execute raw SQL query use $ssql->q($q[, $a]), FETCH_ALL returns an array of rows, FETCH_OBJECT and FETCH_ARRAY return one row per call
   $ssql->q("SELECT * FROM users")->fetch(SQ::FETCH_ALL);
@@ -28,14 +28,20 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   //You can use wildcards for escaping
   $ssql->q("SELECT * FROM users WHERE `username`=%0 OR `nickname`=%1", [$name, $nick])->fetch();
   
+  //You can set the object‐wide $debug property to print all queries before being executed
+  $ssql->debug = true;
+  
   //You can use queries as methods
   $ssql->getUser = "SELECT * FROM users WHERE `username`=%0 OR `nickname`=%1";
   $user = $ssql->getUser($name, $nick)->fetch();
 
-  //For simple requests use $ssql->read($table[, $flags]) or $ssql->read($table, $cond[, $flags])
+  //For simple requests use $ssql->read($table[, $cond][, $flags])
   //Read function uses FETCH_SMART as default (FETCH_OBJECT for one row, FETCH_ALL for more), so you need to use the FETCH_ALL flag to return an array even when there is only one result
   $users = $ssql->read("users", SQ::FETCH_ALL);
   $user = $ssql->read("users", ['uid' => $id]);
+  
+  //You can use the DEBUG flag to print this query before execution
+  $user = $ssql->read("users", ['uid' => $id], SQ::DEBUG);
   
   //You can use more conditions
   $user = $ssql->read("users", ['username' => $name, 'password' => $pass]);
@@ -73,6 +79,15 @@ Let’s have a table “<strong>users</strong>” with 5 columns: `uid`, `userna
   //You can delete rows with $ssql->delete($table, $cond[, $flags])
   $ssql->delete("users", ['id' => $id]);
   
+  //You can use $ssql->put($table, $data[, $cond][, $flags]) for inserting, updating and deleting as well
+  //Insert
+  $ssql->put("users", [$id, $name, $pass, time(), NULL]);
+  $ssql->put("users", ['username' => $name, 'password' => $pass, 'sign_up_time' => time()], SQ::INSERT_RETURN_ID);
+  //Update
+  $ssql->put("users", ['nickname' => $nick], ['id' => $id]);
+  //Delete
+  $ssql->put("users", NULL, ['id' => $id]);
+  
   //Use $ssql->truncate($table[, $flags]) to delete all rows in a table
   $ssql->truncate("users");
 ?>
@@ -94,6 +109,7 @@ Here is list of all SuperSQL flags:
 * <b>FETCH_ALL</b>
 * <b>FETCH_SMART</b>
 * <b>NO_ERROR</b>
+* <b>DEBUG</b>
 
 ## More examples
 
@@ -163,6 +179,6 @@ Here is list of all SuperSQL flags:
   //You can also pass another condition to it, this will select users that don’t have any nickname with username other than "admin" or "root".
   $ssql->read("users", $ssql->cond()->eq("nickname", [""])->not($ssql->cond()->eq("username", ["admin", "root"])));
   
-  //Supported condition functions: ->eq(), ->lt(), ->gt(), ->lte(), ->gte(), ->like() and ->between()
+  //Supported conditions: ->eq(), ->lt(), ->gt(), ->lte(), ->gte(), ->like(), ->between(), ->begins(), ->ends(), ->contains() and ->in()
 ?>
 ```
