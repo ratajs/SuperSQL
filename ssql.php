@@ -670,21 +670,25 @@
 							unset($va[count($va-1)]);
 							$col = true;
 						};
-						if(!is_numeric($v2))
-							$v3 = $this->escape($v2);
 						if(is_numeric($k))
 							$r.= $v;
 						else {
 							$r.= "`{$this->escape($k)}`";
-							$r.= " = ";
+							$r.= $v===NULL ? " IS " : " = ";
 							if(is_numeric($v3))
 								$v3 = intval($v3);
-							if($v3===NULL)
-								$r.= "IS NULL";
 							elseif(is_numeric($v3))
 								$r.= $v;
+							elseif($on || $col)
+								$r.= "`" . $this->escape($v3) . "`";
+							elseif($value===NULL)
+								$r.= "NULL";
+							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v3) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
+								$r.= "'{$esc}'";
+							elseif($this->SQLite)
+								$r.= "x'" . bin2hex($v3) . "'";
 							else
-								$r.= ($on || $col) ? "`{$v3}`" : "'{$v3}'";
+								$r.= "0x" . bin2hex($v3);
 						};
 						$r.= $and ? " AND " : " OR ";
 					};
@@ -698,19 +702,25 @@
 						unset($va[count($va)]);
 						$col = true;
 					};
-					if(!is_numeric($v))
-						$v = $this->escape($v);
 					if(is_numeric($k))
 						$r.= $v;
 					else {
 						$r.= "`" . $this->escape($k) . "`";
-						$r.= " = ";
+						$r.= $v===NULL ? " IS " : " = ";
 						if(is_numeric($v))
 							$v = intval($v);
 						if(is_numeric($v))
 							$r.= $v;
+						elseif($on || $col)
+							$r.= "`" . $this->escape($v) . "`";
+						elseif($v===NULL)
+							$r.= "NULL";
+							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/\x{0027}/", $esc = $this->escape($v)))
+								$r.= "'{$esc}'";
+						elseif($this->SQLite)
+							$r.= "x'" . bin2hex($v) . "'";
 						else
-							$r.= ($on || $col) ? "`{$v}`" : "'{$v}'";
+							$r.= "0x" . bin2hex($v);
 					};
 					$r.= $and ? " AND " : " OR ";
 				};
@@ -917,17 +927,27 @@
 			$this->c = $c;
 			$this->cond = $cond;
 		}
+		public function quote($v) {
+			if(is_numeric($v))
+				return $v;
+			elseif($v===NULL)
+				return "NULL";
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/\x{0027}/", $esc = $this->c->escape($v)))
+					return "'{$esc}'";
+			elseif($this->c->SQLite)
+				return "x'" . bin2hex($v) . "'";
+			else
+				return "0x" . bin2hex($v);
+		}
 		public function eq(string $k, $v, int $flags = 128) {
 			$append = !empty($this->cond);
 			$quotes = "'";
-			if(is_int($v) || is_float($v)) {
+			if(is_int($v) || is_float($v))
 				$v = [$v];
-				$quotes = "";
-			};
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` = " . $quotes . $this->c->escape($v[0]) . $quotes) : ("(`" . $this->c->escape($k) . "` = " . $quotes . $this->c->escape(array_shift($v)) . $quotes . ") OR (" . $this->c->cond()->eq($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` = " . $this->quote($v[0])) : ("(`" . $this->c->escape($k) . "` = " . $this->quote(array_shift($v)) . ") OR (" . $this->c->cond()->eq($k, $v) . ")")) . ($append ? ")" : "");
 			else
 				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` = `" . $this->c->escape($v) . "`") . ($append ? ")" : "");
 			return $this;
@@ -1017,7 +1037,7 @@
 					return implode(", ", array_map(function($n2) {
 						if(is_int($n2) || is_float($n2))
 							return strval($n2);
-						return "'" . $this->c->escape($n2) . "'";
+						return $this->quote($n2);
 					}, $n));
 				return "`" . $this->c->escape($n) . "`";
 			}, $v);
@@ -1028,7 +1048,6 @@
 			$append = !empty($this->cond);
 			if(is_int($v) || is_float($v)) {
 				$v = [$v];
-				$quotes = "";
 			};
 			if(is_array($v) && count($v) < 1)
 				return false;
