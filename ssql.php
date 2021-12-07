@@ -421,7 +421,7 @@
 				if($key!=array_keys($values, array_values($values)[0])[0]) $valueString.= ", ";
 				if($value===NULL)
 					$valueString.= "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value))
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
 					$valueString.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
 					$valueString.= "x'" . bin2hex($value) . "'";
@@ -452,7 +452,7 @@
 				$string.= "`" . $this->escape($key) . "`=";
 				if($value===NULL)
 					$string.= "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value))
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
 					$string.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
 					$string.= "x'" . bin2hex($value) . "'";
