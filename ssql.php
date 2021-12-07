@@ -421,7 +421,7 @@
 				if($key!=array_keys($values, array_values($values)[0])[0]) $valueString.= ", ";
 				if($value===NULL)
 					$valueString.= "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\[x{0027}\x{005C}]/", $value))
 					$valueString.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
 					$valueString.= "x'" . bin2hex($value) . "'";
@@ -452,7 +452,7 @@
 				$string.= "`" . $this->escape($key) . "`=";
 				if($value===NULL)
 					$string.= "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/[\x{0027}\x{005C}]/", $value))
 					$string.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
 					$string.= "x'" . bin2hex($value) . "'";
@@ -683,8 +683,8 @@
 								$r.= "`" . $this->escape($v3) . "`";
 							elseif($value===NULL)
 								$r.= "NULL";
-							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v3) && !preg_match("/\x{0027}/", $esc = $this->escape($v3)))
-								$r.= "'{$esc}'";
+							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v3) && !preg_match("/[\x{0027}\x{005C}]/", $v3))
+								$r.= "'" . $this->escape($v3) . "'";
 							elseif($this->SQLite)
 								$r.= "x'" . bin2hex($v3) . "'";
 							else
@@ -715,8 +715,8 @@
 							$r.= "`" . $this->escape($v) . "`";
 						elseif($v===NULL)
 							$r.= "NULL";
-							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/\x{0027}/", $esc = $this->escape($v)))
-								$r.= "'{$esc}'";
+							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/[\x{0027}\x{005C}]/", $v))
+								$r.= "'" . $this->escape($v) . "'";
 						elseif($this->SQLite)
 							$r.= "x'" . bin2hex($v) . "'";
 						else
@@ -932,8 +932,8 @@
 				return $v;
 			elseif($v===NULL)
 				return "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/\x{0027}/", $esc = $this->c->escape($v)))
-					return "'{$esc}'";
+				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/[\x{0027}\x{005C}]/", $v))
+					return "'" . $this->c->escape($v) . "'";
 			elseif($this->c->SQLite)
 				return "x'" . bin2hex($v) . "'";
 			else
