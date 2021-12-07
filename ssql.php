@@ -1052,9 +1052,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE '" . $this->c->escape($v[0]) . "%'") : ("(`" . $this->c->escape($k) . "` LIKE '" . $this->c->escape(array_shift($v)) . "%') OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote($v[0]) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote(array_shift($v)) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT(`" . $this->c->escape($v) . "`, '%')") . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(`" : "CONCAT(`") . $this->c->escape($v) . ($this->c->SQLite ? "` || '%')" : "`, '%')")) . ($append ? ")" : "");
 			return $this;
 		}
 		public function ends(string $k, $v, int $flags = 128) {
@@ -1066,9 +1066,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE '%" . $this->c->escape($v[0]) . "'") : ("(`" . $this->c->escape($k) . "` LIKE '%" . $this->c->escape(array_shift($v)) . "') OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0]) . ")") : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v)) . ")" . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT('%', `" . $this->c->escape($v) . "`)") . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || `" : "CONCAT('%', `") . $this->c->escape($v) . "`)") . ($append ? ")" : "");
 			return $this;
 		}
 		public function contains(string $k, $v, int $flags = 128) {
@@ -1080,9 +1080,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE '%" . $this->c->escape($v[0]) . "%'") : ("(`" . $this->c->escape($k) . "` LIKE '%" . $this->c->escape(array_shift($v)) . "%') OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0]) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v)) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE CONCAT('%', `" . $this->c->escape($v) . "`, '%')") . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || `" : "CONCAT('%', `") . $this->c->escape($v) . ($this->c->SQLite ? "` || '%')" : "`, '%')")) . ($append ? ")" : "");
 			return $this;
 		}
 
