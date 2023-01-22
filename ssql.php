@@ -12,8 +12,10 @@
 	define("SQ_FETCH_ARRAY", 1024);
 	define("SQ_FETCH_ALL", 2048);
 	define("SQ_FETCH_SMART", 4096);
-	define("SQ_NO_ERROR", 8192);
-	define("SQ_DEBUG", 16384);
+	define("SQ_FETCH_HTML", 8192);
+	define("SQ_CASE_INSENSITIVE", 16384);
+	define("SQ_NO_ERROR", 32768);
+	define("SQ_DEBUG", 65536);
 	class SSQLException extends Exception {
 		public function __construct($e, $code = 0, Throwable $previous = NULL) {
 			$gt = $this->getTrace();
@@ -30,7 +32,7 @@
 			$this->file = $egt['file'];
 			$this->line = $egt['line'];
 		}
-		public function __toString() {
+		public function __toString(): string {
 			ob_start();
 			trigger_error("<strong>SuperSQL error:</strong> " . $this->message . " in <strong>" . $this->file . "</strong> on line <strong>" . $this->line . "</strong>");
 			ob_clean();
@@ -56,8 +58,10 @@
 		const FETCH_ARRAY = 1024;
 		const FETCH_ALL = 2048;
 		const FETCH_SMART = 4096;
-		const NO_ERROR = 8192;
-		const DEBUG = 16384;
+		const FETCH_HTML = 8192;
+		const CASE_INSENSITIVE = 16384;
+		const NO_ERROR = 32768;
+		const DEBUG = 65536;
 
 		static function open(string $host = "", string $user = "", string $password = "", string $db = "", &$object = "return") {
 			if($object=="return")
@@ -105,7 +109,7 @@
 			$this->user = $user;
 			$this->password = $password;
 			$this->db = $database;
-			if(str_replace("create[", "", $database)!=$database && $split = str_split($database) && end($split)=="]") {
+			if(str_replace("create[", "", $database)!=$database && ($split = str_split($database)) && end($split)=="]") {
 				$new = str_replace("]", "", str_replace("create[", "", $database));
 				$this->connect = @new PDO("mysql:host=" . $host, $user, $password);
 				if(!$this->query("
@@ -232,7 +236,7 @@
 			if(empty($this->db) && !$this->SQLite)
 				throw new SSQLException("(tableList): No database selected");
 			$result = $this->result;
-			$this->query(($this->SQLite ? "SELECT `name` FROM `sqlite_master` WHERE type='table' ORDER BY `name`" : ("SHOW TABLES FROM `{$this->db}`")), "tableList", $flags);
+			$this->query(($this->SQLite ? "SELECT `name` FROM `sqlite_master` WHERE type='table' ORDER BY `name`" : ("SHOW TABLES FROM `{$this->db}`")), $flags, "tableList");
 			$r = [];
 			while($f = $this->fetch(self::FETCH_ARRAY)) {
 				$r[] = $f[0];
@@ -267,8 +271,6 @@
 		}
 
 		public function changeDB(string $newDB) {
-			if($this->result instanceof SSQLResult)
-				$this->result->__destruct();
 			$this->connect = NULL;
 			if($this->SQLite)
 				$this->host = $newDB;
@@ -278,35 +280,51 @@
 		}
 
 		public function select(string $table, string $order = "", $cols = "*", $limit = NULL, int $flags = 129, string $name = "select") {
+			$callbacks = [];
 			if(is_array($cols)) {
+				$colsValue = "";
 				foreach($cols as $k => $v) {
+					if($v instanceof Closure) {
+						$callbacks[$k] = $v;
+						continue;
+					};
+					if(!empty($colsValue))
+						$colsValue.= ", ";
 					if(is_int($k))
-						$cols[$k] = "`{$v}` AS `{$k}`";
+						$colsValue.= "`{$v}`";
 					else
-						$cols[$k] = "`{$v}`";
+						$colsValue.= "`{$v}` AS `{$k}`";
 				};
-				$colsValue = implode(", ", $cols);
 			}
 			else
 				$colsValue = strval($cols);
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
 				$order = " ORDER BY `" . $order . "`" . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
-			return $this->query("
+			$r =  $this->query("
 				SELECT {$colsValue} FROM `{$table}`{$limitString}{$order}
 			", $flags, $name);
+			$r->callbacks = $callbacks;
+			return $r;
 		}
 
 		public function selectWhere(string $table, $cond, string $order = "", $cols = "*", $limit = NULL, int $flags = 129, string $name = "selectWhere") {
+			$callbacks = [];
 			$all = !boolval($flags & self::COND_OR);
 			if(is_array($cols)) {
+				$colsValue = "";
 				foreach($cols as $k => $v) {
-					if(gettype($k)!="integer")
-						$cols[$k] = "`{$v}` AS `{$k}`";
+					if($v instanceof Closure) {
+						$callbacks[$k] = $v;
+						continue;
+					};
+					if(!empty($colsValue))
+						$colsValue.= ", ";
+					if(is_int($k))
+						$colsValue.= "`{$v}`";
 					else
-						$cols[$k] = "`{$v}`";
+						$colsValue.= "`{$v}` AS `{$k}`";
 				};
-				$colsValue = implode(", ", $cols);
 			}
 			else
 				$colsValue = strval($cols);
@@ -314,12 +332,15 @@
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
 				$order = " ORDER BY `{$order}`" . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
-			return $this->query("
+			$r = $this->query("
 				SELECT {$colsValue} FROM `{$table}` WHERE {$condString}{$limitString}{$order}
-			", $flags, $name);
+				", $flags, $name);
+			$r->callbacks = $callbacks;
+			return $r;
 		}
 
 		public function selectJoin(string $table, string $join, $on, string $order = "", $cols = "*", $limit = NULL, int $flags = 133, string $name = "selectJoin") {
+			$callbacks = [];
 			$all = !boolval($flags & self::COND_OR);
 			switch(true) {
 				case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -328,13 +349,19 @@
 				default: $jt = "INNER";
 			};
 			if(is_array($cols)) {
+				$colsValue = "";
 				foreach($cols as $k => $v) {
-					if(gettype($k)!="integer")
-						$cols[$k] = "`{$v}` AS `{$k}`";
+					if($v instanceof Closure) {
+						$callbacks[$k] = $v;
+						continue;
+					};
+					if(!empty($colsValue))
+						$colsValue.= ", ";
+					if(is_int($k))
+						$colsValue.= "`{$v}`";
 					else
-						$cols[$k] = "`{$v}`";
+						$colsValue.= "`{$v}` AS `{$k}`";
 				};
-				$colsValue = implode(", ", $cols);
 			}
 			else
 				$colsValue = strval($cols);
@@ -342,14 +369,17 @@
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
 				$order = " ORDER BY `" . $order . "` " . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
-			return $this->query("
+			$r = $this->query("
 				SELECT {$colsValue}
 				FROM `{$table}`
 				{$jt} JOIN `{$join}` ON {$onString}{$limitString}{$order}
-			", $flags, $name);
+				", $flags, $name);
+			$r->callbacks = $callbacks;
+			return $r;
 		}
 
 		public function selectJoinWhere(string $table, string $join, $on, $cond, string $order = "", $cols = "*", $limit = NULL, int $flags = 133, string $name = "selectJoinWhere") {
+			$callbacks = [];
 			$all = !boolval($flags & self::COND_OR);
 			switch(true) {
 				case boolval($flags & self::JOIN_LEFT): $jt = "LEFT OUTER"; break;
@@ -358,13 +388,19 @@
 				default: $jt = "INNER";
 			};
 			if(is_array($cols)) {
+				$colsValue = "";
 				foreach($cols as $k => $v) {
-					if(gettype($k)!="integer")
-						$cols[$k] = "`{$v}` AS `{$k}`";
+					if($v instanceof Closure) {
+						$callbacks[$k] = $v;
+						continue;
+					};
+					if(!empty($colsValue))
+						$colsValue.= ", ";
+					if(is_int($k))
+						$colsValue.= "`{$v}`";
 					else
-						$cols[$k] = "`{$v}`";
+						$colsValue.= "`{$v}` AS `{$k}`";
 				};
-				$colsValue = implode(", ", $cols);
 			}
 			else
 				$colsValue = strval($cols);
@@ -373,12 +409,14 @@
 			$limitString = ($limit===NULL || $limit==="") ? "" : " LIMIT " . intval($this->escape($limit));
 			if(!empty($order))
 				$order = " ORDER BY `{$order}` " . (boolval($flags & self::ORDER_DESC) ? " DESC" : " ASC");
-			return $this->query("
+			$r = $this->query("
 				SELECT {$colsValue}
 				FROM `{$table}`
 				{$jt} JOIN `{$join}` ON {$onString}
 				WHERE {$condString}{$limitString}{$order}
-			", $flags, $name);
+				", $flags, $name);
+			$r->callbacks = $callbacks;
+			return $r;
 		}
 
 		public function exists(string $table, $cond, int $flags = 129, string $name = "exists") {
@@ -452,6 +490,10 @@
 				$string.= "`" . $this->escape($key) . "`=";
 				if($value===NULL)
 					$string.= "NULL";
+				elseif(is_int($value) || is_float($value))
+					$string.= strval($value);
+				elseif(is_bool($value))
+					$string.= $value ? "1" : "0";
 				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/[\x{0027}\x{005C}]/", $value))
 					$string.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
@@ -464,30 +506,24 @@
 			", $flags, $name);
 		}
 
-		public function add(string $table, string $name, string $type, int $length, bool $null, string $where, string$key, string $data = "", int $flags = 0) {
-			if(!empty($data))
-				$data = " " . $data;
-			$type = strtoupper($type);
-			$where = strtoupper($where);
+		public function addColumn(string $table, array $columns, int $flags = 0) {
+			$parameters = $this->getParameters($columns, "add");
+			$valueString = implode(",\nADD ", $parameters);
 			return $this->query("
-				ALTER TABLE `{$table}` ADD '{$name}' {$type}({$length}) " . ($null ? "NULL" : "NOT NULL") . "{$data} {$where} '{$key}'
-			", $flags, "drop");
+				ALTER TABLE `{$table}`\nADD {$valueString}
+			", $flags, "addColumn");
 		}
 
-		public function drop(string $table, string $name) {
+		public function removeColumn(string $table, string $name, int $flags = 0) {
 			return $this->query("
-				ALTER TABLE `{$table}` DROP '{$name}'
-			", $flags, "drop");
+				ALTER TABLE `{$table}` DROP COLUMN `{$name}`
+			", $flags, "removeColumn");
 		}
 
-		public function change(string $table, string $name, string $newname, string $type, int $length, bool $null, string $data = "", int $flags = 0) {
-			if(!empty($data))
-				$data = " " . $data;
-			$type = strtoupper($type);
-			$where = strtoupper($where);
+		public function renameColumn(string $table, string $oldName, string $newName, int $flags = 0) {
 			return $this->query("
-				ALTER TABLE `{$table}` CHANGE '{$name}' {$newname} {$type}({$length}) " . ($null ? "NULL" : "NOT NULL") . $data
-			, $flags, "change");
+				ALTER TABLE `{$table}` RENAME COLUMN `{$oldName}` TO `{$newName}`
+			", $flags, "renameColumn");
 		}
 
 		public function selectAll(string $table, int $flags = 129) {
@@ -513,14 +549,14 @@
 				$cond = [];
 			};
 			if($cond===[])
-				$this->select($table);
+				$this->select($table, "", "*", NULL, $flags, "read");
 			else
-				$this->selectWhere($table, $cond, "", "*", NULL, $flags);
+				$this->selectWhere($table, $cond, "", "*", NULL, $flags, "read");
 			return $this->fetch($flags);
 		}
 
-		public function createTable(string $table, array $params, $primary = NULL, int $flags = 0) {
-			$parameters = $this->getParameters($params, $primary);
+		public function createTable(string $table, array $columns, $primary = NULL, int $flags = 0) {
+			$parameters = $this->getParameters($columns, "createTable", $primary);
 			$valueString = implode(",\n", $parameters);
 			$query = "CREATE TABLE `{$table}` ({$valueString})";
 			return $this->query($query, $flags);
@@ -538,20 +574,22 @@
 			", $flags, "deleteTable");
 		}
 
-		private function getParameters(array $params, $primary = NULL) {
-			foreach($params as $k => $v) {
-				$name = $k;
+		private function getParameters(array $columns, string $name, $primary = NULL) {
+			foreach($columns as $k => $v) {
+				$cname = $this->escape($k);
 				$t = $v['type'];
-				$l = empty($v['length']) ? NULL : $v['length'];
-				$n = $v['NULL'] ? "NULL" : "NOT NULL";
-				$o = empty($v['other']) ? NULL : $v['other'];
-				if(empty($l))
-					$r[] = "`{$name}` {$t} {$n} {$o}";
+				$s = strval($v['size']) ?? NULL;
+				$n = ($v['NULL'] ?? false) ? "NULL" : "NOT NULL";
+				$d = ($v['default'] ?? NULL)!==NULL ? (" DEFAULT " . ((is_int($v['default']) || is_float($v['default']) || is_bool($v['default'])) ? ($v['default']===false ? 0 : strval($v['default'])) : "\"" . $this->escape(strval($v['default'])) . "\"")) : "";
+				$o = empty($v['other']) ? "" : (" " . $v['other']);
+				$a = (!$this->SQLite && $name=="addColumn" && !empty($v['after'])) ? (" AFTER `" . $this->escape($v['after']) . "`") : "";
+				if(!$s)
+					$r[] = "`{$cname}` {$t} {$n}{$d}{$o}{$a}";
 				else
-					$r[] = "`{$name}` {$t}({$l}) {$n} {$o}";
+					$r[] = "`{$cname}` {$t}({$s}) {$n}{$d}{$o}{$a}";
 			};
-			if($primary)
-				$r[] = "PRIMARY KEY ({$primary})";
+			if($name!="add" && $primary)
+				$r[] = "PRIMARY KEY (" . $this->escape($primary) . ")";
 			return $r;
 		}
 
@@ -623,12 +661,12 @@
 				$flags-= self::JOIN_RIGHT;
 			if($flags & self::JOIN_FULL)
 				$flags-= self::JOIN_FULL;
-			$cond = empty($options['cond']) ? false : $options['cond'];
-			$join = empty($options['join']) ? false : $options['join'];
-			$on = empty($options['on']) ? false : $options['on'];
-			$cols = empty($options['cols']) ? "*" : $options['cols'];
-			$order = empty($options['order']) ? "" : $options['order'];
-			$limit = empty($options['limit']) ? NULL : $options['limit'];
+			$cond = $options['cond'] ?? false;
+			$join = $options['join'] ?? false;
+			$on = $options['on'] ?? false;
+			$cols = $options['cols'] ?? "*";
+			$order = $options['order'] ?? "";
+			$limit = $options['limit'] ?? NULL;
 			if(!$cond && (!$join || !$on))
 				$result = $this->select($table, $order, $cols, $limit, $flags | $ordertype, "get");
 			if($cond && (!$join || !$on))
@@ -639,7 +677,7 @@
 				$result = $this->selectJoinWhere($table, $join, $on, $cond, $order, $cols, $limit, $flags | $jointype | $condtype | $ordertype, "get");
 			return $this->fetch($flags | $fetch);
 		}
-		
+
 		public function put(string $table, $data, $cond = NULL, int $flags = 0) {
 			if(is_int($cond) && $flags==0) {
 				$flags = $cond;
@@ -664,7 +702,7 @@
 				if(is_array($v)) {
 					foreach($v as $k2 => $v2) {
 						$col = false;
-						if(!is_numeric($k) && str_split($v2)[0]=="`" && end(str_split($v2))=="`") {
+						if(!is_numeric($k) && str_split($v2)[0]=="`" && array_reverse(str_split($v2))[0]=="`") {
 							$va = str_split($v);
 							unset($va[0]);
 							unset($va[count($va-1)]);
@@ -681,7 +719,7 @@
 								$r.= $v;
 							elseif($on || $col)
 								$r.= "`" . $this->escape($v3) . "`";
-							elseif($value===NULL)
+							elseif($v3===NULL)
 								$r.= "NULL";
 							elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v3) && !preg_match("/[\x{0027}\x{005C}]/", $v3))
 								$r.= "'" . $this->escape($v3) . "'";
@@ -696,7 +734,7 @@
 				}
 				else {
 					$col = false;
-					if(!is_numeric($k) && str_split($v)[0]=="`" && end(str_split($v))=="`") {
+					if(!is_numeric($k) && str_split($v)[0]=="`" && array_reverse(str_split($v))[0]=="`") {
 						$va = str_split($v);
 						unset($va[0]);
 						unset($va[count($va)]);
@@ -731,24 +769,17 @@
 			return ['db' => ($this->SQLite ? "SQLite" : "MySQL"), ($this->SQLite ? 'file' : 'host') => $this->host, 'user' => $this->user, 'password' => preg_replace("/./", "*", $this->password), 'database' => $this->db, 'lastError' => $this->connect->errorInfo()];
 		}
 		public function __sleep() {
-			if($this->result instanceof PDOStatement)
-				$this->result->__destruct();
 			$this->connect = NULL;
 		}
 
 		public function __wakeup() {
 			$this->__construct($this->host, $this->user, $this->password, $this->db);
 		}
-
-		public function __destruct() {
-			if($this->result instanceof PDOStatement)
-				$this->result->__destruct();
-			$this->connect = NULL;
-		}
 	};
 	class SSQLResult {
 		private $pdos;
 		public $columnCount = 0;
+		public $callbacks;
 		public function __construct(PDOStatement $pdos) {
 			$this->pdos = $pdos;
 			$this->columnCount = $this->pdos->columnCount();
@@ -796,27 +827,47 @@
 			return $columns;
 		}
 		public function fetch(int $flags = 512) {
+			if($flags & SQ::FETCH_HTML)
+				return $this->dump(256, true, false);
 			$id = $this->pdos;
 			if(boolval($flags & SQ::FETCH_ALL) || boolval($flags & SQ::FETCH_SMART)) {
 				$return = [];
-				while($row = (boolval($flags & SQ::FETCH_ARRAY) ? $id->fetch() : $id->fetchObject())) {
+				while($row = (boolval($flags & SQ::FETCH_ARRAY) ? $this->fetch(SQ::FETCH_ARRAY) : $this->fetch(SQ::FETCH_OBJECT))) {
 					$return[] = $row;
 				};
 				if(boolval($flags & SQ::FETCH_SMART) && count($return)<2)
-					return count($return)<1 ? false : $return[0];
+					return count($return) < 1 ? false : $return[0];
+				return $return;
 			}
-			elseif(boolval($flags & SQ::FETCH_ARRAY))
+			elseif(boolval($flags & SQ::FETCH_ARRAY)) {
 				$return = $id->fetch();
-			else
+				if(!empty($return) && !empty($this->callbacks)) {
+					foreach($this->callbacks as $k => $v) {
+						if($k==="")
+							$v($return);
+						else
+							$return[$k] = $v($return);
+					};
+				};
+			}
+			else {
 				$return = $id->fetchObject();
+				if(!empty($return) && !empty($this->callbacks)) {
+					foreach($this->callbacks as $k => $v) {
+						if($k==="")
+							$v($return);
+						else
+							$return->$k = $v($return);
+					};
+				};
+			};
 			return $return;
 		}
-		public function dump($limit = 256, bool $columntypes = true, bool $print = true) {
+		private function format($f, $limit = 256, bool $columntypes = true) {
 			$limit = $limit ? intval($limit) : false;
-			$f = $this->fetch(SQ_FETCH_ALL);
 			$h = "";
-			$h.= "<table style=\"border-collapse: collapse; margin: 10px;\">";
-			if($this->columnCount > 0) {
+			$h.= "<table style=\"margin: 10px; border-collapse: collapse;\">";
+			if($this->columnCount + count($this->callbacks) > 0) {
 				$columns = $this->getColumns();
 				$tables = [];
 				if($columns[0]) {
@@ -830,7 +881,7 @@
 				};
 				$i = 0;
 				while($i++ < $this->columnCount) {
-					$h.= "<th style=\"border: 1px solid black; background-color: #ccf; padding: 5px;\">";
+					$h.= "<th style=\"border: 1px solid black; padding: 5px; background-color: #ccf;\">";
 					if(count($tables) > 1)
 						$h.= $columns[$i - 1]->table . ".";
 					if($columns[$i - 1]) {
@@ -849,16 +900,21 @@
 					else
 						$h.= "</th>";
 				};
+				foreach($this->callbacks as $k => $v) {
+					$h.= "<th style=\"border: 1px solid black; padding: 5px; color: #404A77;\">";
+					$h.= $k;
+					$h.= "</th>";
+				};
 				$h.= "</tr>";
 			};
-			if(count($f)==0 && $this->columnCount>0)
+			if(count($f)==0 && $this->columnCount + count($this->callbacks) > 0)
 				$h.= "<tr><td colspan=\"" . $this->columnCount . "\" style=\"border: 1px solid black; padding: 5px;\"><em>No rows returned</em></td></tr>";
-			elseif($this->columnCount>0) {
+			elseif($this->columnCount + count($this->callbacks) > 0) {
 				foreach($f as $k => $v) {
 					$h.= "<tr>";
 					$i = 0;
 					foreach($v as $key => $val) {
-						$h.= "<td style=\"border: 1px solid black; padding: 5px; text-align: center;\">" . ($val===NULL ? "<em>NULL</em>" : ($limit && (strlen($val)>$limit) ? "<em>Value longer than " . $limit . " bytes</em>" : ("<pre>" . ((($columns[$i] && $columns[$i]->type=="BLOB") || !preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſΑ-ωА-я‐- ⁰-₿℀-⋿①-⓿]*$/", $val)) ? ("<strong>HEX: </strong><em>" . bin2hex($val) . "</em>") : str_replace(["\n", "\r"], "", nl2br(htmlspecialchars($val, ENT_QUOTES, "UTF-8")))) . "</pre>"))) . "</td>";
+						$h.= "<td style=\"border: 1px solid black; padding: 5px; text-align: center;\">" . ($val===NULL ? "<em>NULL</em>" : ($limit && (strlen($val) > $limit) ? "<em>Value longer than " . $limit . " bytes</em>" : ("<pre>" . (((!empty($columns[$i]) && $columns[$i]->type=="BLOB") || !preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſΑ-ωА-я‐- ⁰-₿℀-⋿①-⓿]*$/", $val)) ? ("<strong>HEX: </strong><em>" . bin2hex($val) . "</em>") : str_replace(["\n", "\r"], "", nl2br(htmlspecialchars($val, ENT_QUOTES, "UTF-8")))) . "</pre>"))) . "</td>";
 						$i++;
 					};
 					$h.= "<tr>";
@@ -868,15 +924,16 @@
 				$h = "<em>Empty response</em>";
 			if(str_replace("<table", "", $h)!=$h)
 				$h.= "</table>";
-			if($print)
-				print $h;
 			return $h;
 		}
-		public function __toString() {
-			return $this->dump(256, true, false);
+		public function dump($limit = 256, bool $columntypes = true, bool $print = true) {
+			$r = $this->format($this->fetch(SQ::FETCH_ALL), $limit, $columntypes);
+			if($print)
+				print $r;
+			return $r;
 		}
-		public function __destruct() {
-			$this->pdos = NULL;
+		public function __toString(): string {
+			return $this->dump(256, true, false);
 		}
 	};
 
@@ -922,22 +979,22 @@
 
 	class SSQLCond {
 		private $c;
-		private $text;
+		private $cond;
 		public function __construct(SSQL $c, $cond = "") {
 			$this->c = $c;
 			$this->cond = $cond;
 		}
-		public function quote($v) {
-			if(is_numeric($v))
+		public function quote($v, int $flags = 0) {
+			if(is_int($v))
 				return $v;
 			elseif($v===NULL)
 				return "NULL";
 				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $v) && !preg_match("/[\x{0027}\x{005C}]/", $v))
-					return "'" . $this->c->escape($v) . "'";
+					return (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "'" . $this->c->escape($v) . "'" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "");
 			elseif($this->c->SQLite)
-				return "x'" . bin2hex($v) . "'";
+				return (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "x'" . bin2hex($v) . "'" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "");
 			else
-				return "0x" . bin2hex($v);
+				return (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "0x" . bin2hex($v) . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "");
 		}
 		public function eq(string $k, $v, int $flags = 128) {
 			$append = !empty($this->cond);
@@ -947,9 +1004,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` = " . $this->quote($v[0])) : ("(`" . $this->c->escape($k) . "` = " . $this->quote(array_shift($v)) . ") OR (" . $this->c->cond()->eq($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " = " . $this->quote($v[0], $flags)) : ("(" . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " = " . $this->quote(array_shift($v), $flags) . ") OR (" . $this->c->cond()->eq($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` = `" . $this->c->escape($v) . "`") . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " = " . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($v) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "")) . ($append ? ")" : "");
 			return $this;
 		}
 		public function lt(string $k, $v, int $flags = 128) {
@@ -1030,18 +1087,18 @@
 			$append = !empty($this->cond);
 			if(count($v) < 1)
 				return false;
-			$values = array_map(function($n) {
+			$values = array_map(function($n) use ($flags) {
 				if(is_int($n) || is_float($n))
 					return strval($n);
 				if(is_array($n))
-					return implode(", ", array_map(function($n2) {
+					return implode(", ", array_map(function($n2) use ($flags) {
 						if(is_int($n2) || is_float($n2))
 							return strval($n2);
-						return $this->quote($n2);
+						return $this->quote(($flags & SQ::CASE_INSENSITIVE) ? strtolower($n2) : $n2, $flags);
 					}, $n));
-				return "`" . $this->c->escape($n) . "`";
+				return ($flags & SQ::CASE_INSENSITIVE ? "LOWER(" : "") . "`" . $this->c->escape($n) . "`" . ($flags & SQ::CASE_INSENSITIVE ? ")" : "");
 			}, $v);
-			$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` IN (" . implode(", ", $values) . ")") . ($append ? ")" : "");
+			$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . (($flags & SQ::CASE_INSENSITIVE ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . ($flags & SQ::CASE_INSENSITIVE ? ")" : "") . " IN (" . implode(", ", $values) . ")") . ($append ? ")" : "");
 			return $this;
 		}
 		public function begins(string $k, $v, int $flags = 128) {
@@ -1052,9 +1109,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote($v[0]) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote(array_shift($v)) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote($v[0], $flags) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(" . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . $this->quote(array_shift($v), $flags) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "(`" : "CONCAT(`") . $this->c->escape($v) . ($this->c->SQLite ? "` || '%')" : "`, '%')")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "(" : "CONCAT(") . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($v) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . ($this->c->SQLite ? " || '%')" : ", '%')")) . ($append ? ")" : "");
 			return $this;
 		}
 		public function ends(string $k, $v, int $flags = 128) {
@@ -1066,9 +1123,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0]) . ")") : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v)) . ")" . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0], $flags) . ")") : ("(" . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v), $flags) . ")" . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || `" : "CONCAT('%', `") . $this->c->escape($v) . "`)") . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($v) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . ")") . ($append ? ")" : "");
 			return $this;
 		}
 		public function contains(string $k, $v, int $flags = 128) {
@@ -1080,9 +1137,9 @@
 			if(is_array($v) && count($v) < 1)
 				return false;
 			if(is_array($v))
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0]) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v)) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((count($v) < 2) ? ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote($v[0], $flags) . ($this->c->SQLite ? " || '%')" : ", '%')")) : ("(" . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . $this->quote(array_shift($v), $flags) . ($this->c->SQLite ? " || '%')" : ", '%')") . ") OR (" . $this->c->cond()->like($k, $v) . ")")) . ($append ? ")" : "");
 			else
-				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ("`" . $this->c->escape($k) . "` LIKE " . ($this->c->SQLite ? "('%' || `" : "CONCAT('%', `") . $this->c->escape($v) . ($this->c->SQLite ? "` || '%')" : "`, '%')")) . ($append ? ")" : "");
+				$this->cond = ($append ? ("({$this->cond}) " . ($flags & SQ::COND_OR ? "OR" : "AND") . " (") : "") . ((($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($k) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . " LIKE " . ($this->c->SQLite ? "('%' || " : "CONCAT('%', ") . (($flags & SQ::CASE_INSENSITIVE) ? "LOWER(" : "") . "`" . $this->c->escape($v) . "`" . (($flags & SQ::CASE_INSENSITIVE) ? ")" : "") . ($this->c->SQLite ? " || '%')" : ", '%')")) . ($append ? ")" : "");
 			return $this;
 		}
 
@@ -1096,7 +1153,7 @@
 			return $this;
 		}
 
-		public function __toString() {
+		public function __toString(): string {
 			return $this->cond;
 		}
 	}
