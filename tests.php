@@ -518,7 +518,7 @@
 	assert($r[0]->num==16);
 	assert($r[1]->num==48);
 
-	$ssql->q("UPDATE `table3` SET `table3_num` = \"%1\" WHERE `table3_id` = \"%0\"", "3", "42");
+	$ssql->q("UPDATE `table3` SET `table3_num` = '%1' WHERE `table3_id` = '%0'", "3", "42");
 	$r = $ssql->read("table3");
 	assert(count($r)==4);
 	assert($r[0]->table3_id==1);
@@ -537,7 +537,7 @@
 	assert(count($r)==1);
 	assert($r[0]->num==16);
 
-	$ssql->inc = "UPDATE `table3` SET `table3_num` = `table3_num` + 1 WHERE `table3_id` = %0";
+	$ssql->inc = "UPDATE `table3` SET `table3_num` = `table3_num` + 1 WHERE `table3_id` = '%0'";
 	$ssql->inc(4);
 	$r = $ssql->read("table3");
 	assert(count($r)==4);

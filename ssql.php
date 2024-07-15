@@ -49,14 +49,9 @@
 		const INSERT_RETURN_ID = 64;
 		const COND_AND = 128;
 		const COND_OR = 256;
-		const FETCH_OBJECT = 512;
-		const FETCH_ARRAY = 1024;
-		const FETCH_ALL = 2048;
-		const FETCH_SMART = 4096;
-		const FETCH_HTML = 8192;
-		const CASE_INSENSITIVE = 16384;
-		const NO_ERROR = 32768;
-		const DEBUG = 65536;
+		const CASE_INSENSITIVE = 512;
+		const NO_ERROR = 1024;
+		const DEBUG = 2048;
 
 		static function open(string $host = "", string $user = "", string $password = "", string $db = "", &$object = "return") {
 			if($object=="return")
@@ -606,30 +601,6 @@
 				$jointype = boolval($flags & self::JOIN_FULL) ? self::JOIN_FULL : (boolval($flags & self::JOIN_RIGHT) ? self::JOIN_RIGHT : (boolval($flags & self::JOIN_LEFT) ? self::JOIN_LEFT : self::JOIN_INNER));
 			else
 				$jointype = $options['join_type'];
-			if($flags & self::FETCH_OBJECT)
-				$flags-= self::FETCH_OBJECT;
-			if($flags & self::FETCH_ARRAY)
-				$flags-= self::FETCH_ARRAY;
-			if($flags & self::FETCH_ALL)
-				$flags-= self::FETCH_ALL;
-			if($flags & self::FETCH_SMART)
-				$flags-= self::FETCH_SMART;
-			if($flags & self::COND_AND)
-				$flags-= self::COND_AND;
-			if($flags & self::COND_OR)
-				$flags-= self::COND_OR;
-			if($flags & self::ORDER_ASC)
-				$flags-= self::ORDER_ASC;
-			if($flags & self::ORDER_DESC)
-				$flags-= self::ORDER_DESC;
-			if($flags & self::JOIN_INNER)
-				$flags-= self::JOIN_INNER;
-			if($flags & self::JOIN_LEFT)
-				$flags-= self::JOIN_LEFT;
-			if($flags & self::JOIN_RIGHT)
-				$flags-= self::JOIN_RIGHT;
-			if($flags & self::JOIN_FULL)
-				$flags-= self::JOIN_FULL;
 			$cond = $options['cond'] ?? false;
 			$join = $options['join'] ?? false;
 			$on = $options['on'] ?? false;
