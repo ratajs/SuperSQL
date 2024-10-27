@@ -737,7 +737,10 @@
 				};
 				$columns[$i - 1] = new StdClass();
 				$columns[$i - 1]->name = $meta['name'];
-				$columns[$i - 1]->table = $meta['table'];
+				if(isset($meta['table']))
+					$columns[$i - 1]->table = $meta['table'];
+				else
+					$columns[$i - 1]->table = NULL;
 				if(isset($meta['mysql:decl_type']))
 					$columns[$i - 1]->type = strtoupper($meta['mysql:decl_type']);
 				elseif(isset($meta['sqlite:decl_type'])) {
@@ -803,21 +806,28 @@
 				$tables = [];
 				if($columns[0]) {
 					foreach($columns as $k => $v) {
+						if($v->table===NULL) {
+							$tables = NULL;
+							break;
+						};
 						if(!in_array($v->table, $tables))
 							$tables[] = $v->table;
 					};
-					$h.= "<caption>";
-					$h.= implode(", ", $tables);
-					$h.= "</caption><tr>";
+					if($tables!==NULL && count($tables) > 0) {
+						$h.= "<caption>";
+						$h.= implode(", ", $tables);
+						$h.= "</caption>";
+					};
+					$h.= "<thead><tr>";
 				};
 				$i = 0;
 				while($i++ < $this->columnCount) {
 					$h.= "<th style=\"border: 1px solid black; padding: 5px; background-color: #ccf;\">";
-					if(count($tables) > 1)
+					if($tables!==NULL && count($tables) > 1)
 						$h.= $columns[$i - 1]->table . ".";
 					if($columns[$i - 1]) {
 						$h.= $columns[$i - 1]->name;
-						if($columntypes) {
+						if($columntypes && $columns[$i - 1]->type!==NULL) {
 							$h.= "<small style=\"opacity: .75\">&nbsp;&ndash;&nbsp;<em>";
 							$h.= $columns[$i - 1]->type;
 							$h.= "</em></small>";
@@ -836,7 +846,7 @@
 					$h.= $k;
 					$h.= "</th>";
 				};
-				$h.= "</tr>";
+				$h.= "</tr></thead>";
 			};
 			if(count($f)==0 && $this->columnCount + count($this->callbacks) > 0)
 				$h.= "<tr><td colspan=\"" . $this->columnCount . "\" style=\"border: 1px solid black; padding: 5px;\"><em>No rows returned</em></td></tr>";
@@ -848,7 +858,7 @@
 						$h.= "<td style=\"border: 1px solid black; padding: 5px; text-align: center;\">" . ($val===NULL ? "<em>NULL</em>" : ($limit && (strlen($val) > $limit) ? "<em>Value longer than " . $limit . " bytes</em>" : ("<pre>" . (((!empty($columns[$i]) && $columns[$i]->type=="BLOB") || !preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſΑ-ωА-я‐- ⁰-₿℀-⋿①-⓿]*$/", $val)) ? ("<strong>HEX: </strong><em>" . bin2hex($val) . "</em>") : str_replace(["\n", "\r"], "", nl2br(htmlspecialchars($val, ENT_QUOTES, "UTF-8")))) . "</pre>"))) . "</td>";
 						$i++;
 					};
-					$h.= "<tr>";
+					$h.= "</tr>";
 				};
 			}
 			else
