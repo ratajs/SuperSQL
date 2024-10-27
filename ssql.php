@@ -561,8 +561,19 @@
 				else
 					$r[] = "`{$cname}` {$t}({$s}) {$n}{$d}{$o}{$a}";
 			};
-			if($name!="add" && $primary)
-				$r[] = "PRIMARY KEY (`{$this->escape($primary)}`)";
+			if($name!="add" && $primary!==NULL) {
+				if(is_array($primary)) {
+					if(count($primary)==0)
+						return $r;
+					$keyString = "PRIMARY KEY (";
+					$keyString.= $this->escape(array_shift($primary));
+					foreach($primary as $k2 => $v2)
+						$keyString.= ", `" . $this->escape($v2) . "`";
+					$keyString.= ")";
+				}
+				else
+					$r[] = "PRIMARY KEY (`{$this->escape($primary)}`)";
+			};
 			return $r;
 		}
 
