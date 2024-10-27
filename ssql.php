@@ -444,9 +444,12 @@
 			$valueString = "";
 			foreach($values as $key => $value) {
 				if($key!=array_keys($values, array_values($values)[0])[0]) $valueString.= ", ";
-				if($value===NULL)
+				if($value===NULL) {
 					$valueString.= "NULL";
-				elseif(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\[x{0027}\x{005C}]/", $value))
+					continue;
+				};
+				$value = strval($value);
+				if(preg_match("/^[\x{0020}-\x{007E}\x{00A0}-ſ]*$/", $value) && !preg_match("/\[x{0027}\x{005C}]/", $value))
 					$valueString.= "'" . $this->escape($value) . "'";
 				elseif($this->SQLite)
 					$valueString.= "x'" . bin2hex($value) . "'";
